@@ -112,7 +112,7 @@ enum Show{
   UPLOAD
 };
 
-Show show = ANIM_NAME;
+Show show = ANIM_CLOCK_BIG;
 
 
 #define EEPROM_SIZE 512
@@ -486,19 +486,19 @@ void loop() {
   break;
 
   case ANIM_TEXT1:
-
+    drawText1();
   break;
 
   case ANIM_TEXT2 :
-
+    drawText2();
   break;
 
   case ANIM_SHOLAT :
-    animasiJadwalSholat();
+    drawJadwalSholat();
   break;
   
   case ANIM_ADZAN :
-    drawAzzan();
+//    drawAzzan();
   break;
 
   case ANIM_IQOMAH :
