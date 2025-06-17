@@ -114,7 +114,7 @@ snprintf(buff_date,sizeof(buff_date), "%s","MASJID AL MA`ANY DSN NGAMPEL RT13/RW
  if (Tmr - lsRn > Speed) { 
   lsRn = Tmr;
   if (x < fullScroll) {++x; }
-  else {x = 0; show=ANIM_TEXT1; return;}
+  else {x = 0; counterName=1;show=ANIM_TEXT1; return;}
  
     //Marquee    jam yang tampil di bawah
   Disp.drawText(Disp.width() - x, 0, buff_date); //runing teks diatas
@@ -152,7 +152,7 @@ void drawText1(){
  if (Tmr - lsRn > Speed) { 
   lsRn = Tmr;
   if (x < fullScroll) {++x; }
-  else {x = 0; Disp.drawLine(0,0,64,0,0); show=ANIM_SHOLAT; return;}
+  else {x = 0; Disp.drawLine(0,0,64,0,0); show=ANIM_TEXT2; return;}
         
   
   if (x<=6)                     { dwCtr(0,x-6,Buff); }
@@ -190,90 +190,224 @@ void drawText2(){
  if (Tmr - lsRn > Speed) { 
   lsRn = Tmr;
   if (x < fullScroll) {++x; }
-  else {x = 0; Disp.drawLine(0,0,64,0,0); show=ANIM_SHOLAT; return;}
+  else {x = 0; show=ANIM_SHOLAT; return;}
+ 
+    //Marquee    jam yang tampil di bawah
+  Disp.drawText(Disp.width() - x, 0, buff_date); //runing teks diatas
+  //fType(0);
+  if (x<=6)                     { dwCtr(0,16-x,Buff);}
+  else if (x>=(fullScroll-6))   { dwCtr(0,16-(fullScroll-x),Buff); Disp.drawLine(0,15-(fullScroll-x),64,15-(fullScroll-x),0);}
+  else                          { dwCtr(0,9,Buff);}//posisi jamnya yang bawah
         
-  
-  if (x<=6)                     { dwCtr(0,x-6,Buff); }
-  else if (x>=(fullScroll-6))   { dwCtr(0,(fullScroll-x)-6,Buff); }
-  else                          { dwCtr(0,0,Buff); }  //posisi jam nya yang diatas
-   
-   //fType(0); //Marquee  running teks dibawah
-   Disp.drawText(Disp.width() - x, 9 , buff_date);//runinng teks dibawah
  }
 }
 
-void drawJadwalSholat(){
-  RtcDateTime now = Rtc.GetDateTime();
-  static int        y=0;
-  static int        y1=0;
-  static uint8_t    s=0; // 0=in, 1=out   
-  static uint8_t    s1=0;
-  static bool       run = false;
-  
-  float sholatT[]={JWS.floatSubuh,JWS.floatTerbit,JWS.floatDhuha,JWS.floatDzuhur,JWS.floatAshar,JWS.floatMaghrib,JWS.floatIsya};
-
+void scrollText(){
+   static uint16_t x;
+  static uint16_t fullScroll = 0;
   static uint32_t   lsRn;
-  uint32_t          Tmr = millis(); 
-  
-  const char *jadwal[] = {"SUBUH","TERBIT","DHUHA", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
-  char buff_jadwal[6];
-  char Ja[3];
-  char Min[3];
-  char De[3];
-  
-  sprintf(Ja,"%02d",now.Hour());
-  sprintf(Min,"%02d",now.Minute());
-  sprintf(De,"%02d",now.Second());
+  uint32_t          Tmr = millis();
+  uint8_t Speed = 30;//speedDate;
+  char buff_date[]="MASJID AL MA ANY DSN NGAMPEL RT13/RW02,TANJUNGSARI";
 
-  Disp.drawLine(26,0,26,16,1);
-  
-if((Tmr-lsRn)>55) 
-  { 
-    if(s1==0 and y1<9){lsRn=Tmr; y1++; }
-    if(s1==1 and y1>-5){lsRn=Tmr; y1--; Disp.drawLine(14,17-y1,27,17-y1,0); Disp.drawLine(0,y1-8,26,y1-8,0);}
+  fType(4);
+  if (fullScroll == 0) { // Hitung hanya sekali
+    fullScroll = Disp.textWidth(buff_date) + Disp.width();
   }
 
-if(y1==9 && s1==0){ run=true; }
-
-  fType(5);
-  Disp.drawText(0,y1-9,Ja);
-  
-  fType(0);
-  Disp.drawText(14,y1-9,Min);
-  Disp.drawText(14,18-y1,De);//9
-  
-if((Tmr-lsRn)>55 && run == true) 
-  { 
-    if(s==0 and y<9){lsRn=Tmr; y++; }
-    if(s==1 and y>0){lsRn=Tmr; y--; Disp.drawLine(28,17-y,64,17-y,0);}
-  }
-
-  if((Tmr-lsRn)>4000 and y == 9) { s=1;}
-
-  if (y==0 && s==1) { 
-    s=0;
-    Disp.drawLine(27,0,64,0,0);
-    list++; 
-    if(list==7){run=false; list=0; s1=1;  }
-  }
-
+ if (Tmr - lsRn > Speed) { 
+  lsRn = Tmr;
+  if (x < fullScroll) {++x; }
+  else {x = 0; counterName=0;show=ANIM_CLOCK_BIG; return;}
  
-
-  float stime = sholatT[list];
-  uint8_t shour = floor(stime);
-  uint8_t sminute = floor((stime - (float)shour) * 60);
-  uint8_t ssecond = floor((stime - (float)shour - (float)sminute / 60) * 3600);
-
-  sprintf(buff_jadwal, "%02d:%02d", shour, sminute);
-  fType(0);
-  dwCtr(28,y-9,jadwal[list]);
-  dwCtr(30,18-y,buff_jadwal);
-
-  
-
-   if(y1==-5 && s1==1){Disp.drawRect(0,0,64,16,0); s1=0;  show=ANIM_CLOCK_BIG;}
+    //Marquee    jam yang tampil di bawah
+  Disp.drawText(Disp.width() - x, 0, buff_date); //runing teks diatas
+}
 }
 
+//void drawJadwalSholat(){
+//  RtcDateTime now = Rtc.GetDateTime();
+//  static int        y=0;
+//  static int        y1=0;
+//  static uint8_t    s=0; // 0=in, 1=out   
+//  static uint8_t    s1=0;
+//  static bool       run = false;
+//  
+//  float sholatT[]={JWS.floatSubuh,JWS.floatTerbit,JWS.floatDhuha,JWS.floatDzuhur,JWS.floatAshar,JWS.floatMaghrib,JWS.floatIsya};
+//
+//  static uint32_t   lsRn;
+//  uint32_t          Tmr = millis(); 
+//  
+//  const char *jadwal[] = {"SUBUH","TERBIT","DHUHA", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
+//  char buff_jadwal[6];
+//  char Ja[3];
+//  char Min[3];
+//  char De[3];
+//  
+//  sprintf(Ja,"%02d",now.Hour());
+//  sprintf(Min,"%02d",now.Minute());
+//  sprintf(De,"%02d",now.Second());
+//
+//if((Tmr-lsRn)>55) 
+//  { 
+//    if(s1==0 and y1<17){lsRn=Tmr; Disp.drawLine(26,y1,26,y1,1);  y1++;}
+//      if(s1==1 and y1>0){lsRn=Tmr;  
+//        Disp.drawLine(14,25-y1,25,25-y1,0);//detik
+//        Disp.drawLine(0,y1-2,12,y1-2,0); //jam
+//        Disp.drawLine(14,y1-9,24,y1-9,0); //menit
+//        Disp.drawLine(26,y1,26,y1,0);
+//        y1--;
+//      }
+//  }
+//
+//if(y1==17 && s1==0){ run=true; }
+//
+//  fType(5);
+//  Disp.drawText(0,y1-17,Ja);
+//  
+//  fType(0);
+//  Disp.drawText(14,y1-17,Min);
+//  Disp.drawText(14,26-y1,De);//9
+//  
+//if((Tmr-lsRn)>55 && run == true) 
+//  { 
+//    if(s==0 and y<9){lsRn=Tmr; y++; }
+//    if(s==1 and y>0){lsRn=Tmr; y--; Disp.drawLine(28,17-y,64,17-y,0);}
+//  }
+//
+//  if((Tmr-lsRn)>4000 and y == 9) { s=1;}
+//
+//  if (y==0 && s==1) { 
+//    s=0;
+//    Disp.drawLine(27,0,64,0,0);
+//    list++; 
+//    if(list==7){run=false; list=0; s1=1;  }
+//  }
+//
+//  float stime = sholatT[list];
+//  uint8_t shour = floor(stime);
+//  uint8_t sminute = floor((stime - (float)shour) * 60);
+//  uint8_t ssecond = floor((stime - (float)shour - (float)sminute / 60) * 3600);
+//
+//  sprintf(buff_jadwal, "%02d:%02d", shour, sminute);
+//  fType(0);
+//  dwCtr(28,y-9,jadwal[list]);
+//  dwCtr(30,18-y,buff_jadwal);
+//
+//  if(y1==0 && s1==1){s1=0;  show=ANIM_CLOCK_BIG;}
+//   
+//}
+// Letakkan di luar fungsi agar hemat stack RAM
+const char* jadwal[] PROGMEM = {"SUBUH", "TERBIT", "DHUHA", "DZUHUR", "ASHAR", "MAGRIB", "ISYA'"};
+
+void drawJadwalSholat() {
+  RtcDateTime now = Rtc.GetDateTime();
+  static int y = 0, y1 = 0;
+  static uint8_t s = 0, s1 = 0;
+  static bool run = false;
+
+  static uint32_t lsRn_y1 = 0;
+  static uint32_t lsRn_y = 0;
+  static uint32_t tHold = 0;
+
+  uint32_t Tmr = millis();
+
+  // Pilih waktu sholat sesuai list
+  float stime;
+  switch (list) {
+    case 0: stime = JWS.floatSubuh; break;
+    case 1: stime = JWS.floatTerbit; break;
+    case 2: stime = JWS.floatDhuha; break;
+    case 3: stime = JWS.floatDzuhur; break;
+    case 4: stime = JWS.floatAshar; break;
+    case 5: stime = JWS.floatMaghrib; break;
+    case 6: stime = JWS.floatIsya; break;
+    default: stime = 0; break;
+  }
+
+  // Transisi vertikal y1 (jam muncul/hilang)
+  if ((Tmr - lsRn_y1) > 55) {
+    lsRn_y1 = Tmr;
+
+    if (s1 == 0 && y1 < 17) {
+      Disp.drawLine(26, y1, 26, y1, 1);
+      y1++;
+    } else if (s1 == 1 && y1 > 0) {
+      Disp.drawLine(14, 25 - y1, 25, 25 - y1, 0); // detik
+      Disp.drawLine(0, y1 - 2, 12, y1 - 2, 0);    // jam
+      Disp.drawLine(14, y1 - 9, 24, y1 - 9, 0);   // menit
+      Disp.drawLine(26, y1, 26, y1, 0);
+      y1--;
+    }
+  }
+
+  // Saat y1 selesai muncul, mulai animasi jadwal
+  if (y1 == 17 && s1 == 0) run = true;
+
+  // Animasi gerakan teks (y)
+  if (run && (Tmr - lsRn_y) > 55) {
+    lsRn_y = Tmr;
+
+    if (s == 0 && y < 9) {
+      y++;
+    } else if (s == 1 && y > 0) {
+      y--;
+      Disp.drawLine(28, 17 - y, 64, 17 - y, 0);
+    }
+  }
+
+  // Delay sebelum animasi keluar (reverse)
+  if (y == 9 && s == 0 && tHold == 0) {
+    tHold = millis();
+  }
+  if (tHold > 0 && (millis() - tHold > 4000)) {
+    s = 1;     // mulai keluar
+    tHold = 0; // reset timer
+  }
+
+  // Setelah animasi selesai
+  if (y == 0 && s == 1) {
+    s = 0;
+    Disp.drawLine(27, 0, 64, 0, 0);
+    list = (list + 1) % 7;
+    if (list == 0) {
+      run = false;
+      s1 = 1; // trigger keluar vertikal
+    }
+  }
+
+  // Tampilkan jam digital
+  fType(5);
+  Disp.drawChar(0, y1 - 17, '0' + now.Hour() / 10);
+  Disp.drawChar(6, y1 - 17, '0' + now.Hour() % 10);
+
+  fType(0);
+  Disp.drawChar(14, y1 - 17, '0' + now.Minute() / 10);
+  Disp.drawChar(20, y1 - 17, '0' + now.Minute() % 10);
+  Disp.drawChar(14, 26 - y1, '0' + now.Second() / 10);
+  Disp.drawChar(20, 26 - y1, '0' + now.Second() % 10);
+
+  // Tampilkan teks jadwal sholat
+  uint8_t shour = (uint8_t)stime;
+  uint8_t sminute = (uint8_t)((stime - shour) * 60);
+
+  char buf[6];
+  buf[0] = '0' + shour / 10;
+  buf[1] = '0' + shour % 10;
+  buf[2] = ':';
+  buf[3] = '0' + sminute / 10;
+  buf[4] = '0' + sminute % 10;
+  buf[5] = '\0';
+
+  fType(0);
+  dwCtr(28, y - 9, jadwal[list]);
+  dwCtr(30, 18 - y, buf);
+
+  if (y1 == 0 && s1 == 1) {
+    s1 = 0;
+    show = ANIM_CLOCK_BIG; // ganti mode jika perlu
+  }
+}
 
 
 
@@ -498,7 +632,7 @@ void drawAzzan()
         Buzzer(0);
     }
 }
-/*
+
 void drawIqomah()  // Countdown Iqomah (9 menit)
 {  
     static uint32_t lsRn = 0;
@@ -585,9 +719,9 @@ void blinkBlock()
         adzan = false;
         ct = 0;
         Disp.clear();
-        show = ANIM_JAM;
+        show = ANIM_CLOCK_BIG;
     }
-}*/
+}
 //===================================== end =================================//
 
 //=========================== setingan untuk tampilan text=================//

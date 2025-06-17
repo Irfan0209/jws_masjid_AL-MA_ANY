@@ -38,7 +38,7 @@ ESP8266WebServer server(80);
 #include <C:\Users\irfan\Documents\Project\jws_masjid_AL-MA_ANY\fonts/Font4x6.h>
 #include <C:\Users\irfan\Documents\Project\jws_masjid_AL-MA_ANY\fonts/System4x7.h>
 #include <C:\Users\irfan\Documents\Project\jws_masjid_AL-MA_ANY\fonts/SmallCap4x6.h>
-#include <C:\Users\irfan\Documents\Project\jws_masjid_AL-MA_ANY\fonts/EMSans6x16.h>
+#include <C:\Users\irfan\Documents\Project\jws_masjid_AL-MA_ANY\fonts/EMSans8x16.h>
 #include <C:\Users\irfan\Documents\Project\jws_masjid_AL-MA_ANY\fonts/BigNumber.h>
 
 
@@ -48,7 +48,7 @@ ESP8266WebServer server(80);
 #define Font1 Font4x6
 #define Font2 System4x7 
 #define Font3 SmallCap4x6
-#define Font4 EMSans6x16
+#define Font4 EMSans8x16
 #define Font5 BigNumber
 
 //create object
@@ -78,7 +78,7 @@ Config config;
 
 // Variabel untuk waktu, tanggal, teks berjalan, tampilan ,dan kecerahan
 char text1[101], text2[101];
-uint16_t   brightness    = 100;
+uint16_t   brightness    = 50;
 bool       adzan         = 0;
 bool       stateBuzzer   = 1;
 uint8_t    DWidth        = Disp.width();
@@ -97,6 +97,7 @@ uint8_t    indexText;
 uint8_t    list,lastList;
 bool       stateMode       = 0;
 bool       stateBuzzWar    = 0;
+uint8_t       counterName     = 0;
 /*============== end ================*/
 
 enum Show{
@@ -482,7 +483,7 @@ void loop() {
   break;
 
   case ANIM_NAME :
-    drawName();
+    (counterName==0)?drawName():scrollText();
   break;
 
   case ANIM_TEXT1:
@@ -502,11 +503,11 @@ void loop() {
   break;
 
   case ANIM_IQOMAH :
-
+    drawIqomah();
   break;
 
   case ANIM_BLINK :
-
+    blinkBlock();
   break;
 
   case UPLOAD :
