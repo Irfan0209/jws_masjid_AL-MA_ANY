@@ -626,7 +626,7 @@ void drawAzzan()
     
     if ((Tmr - lsRn) > 1500 && (ct > limit))
     {
-        show = ANIM_CLOCK_BIG;
+        show = ANIM_IQOMAH;
         Disp.clear();
         ct = 0;
         Buzzer(0);
@@ -649,11 +649,11 @@ void drawIqomah()  // Countdown Iqomah (9 menit)
 
     if ((ct & 1) == 0) {  // Gunakan bitwise untuk optimasi modulo 2
         fType(0);
-        dwCtr(0, 8, "IQOMAH");
+        dwCtr(0, 0, "IQOMAH");
     }
 
     fType(0);
-    dwCtr(0, 16, locBuff);
+    dwCtr(0, 8, locBuff);
 
     if (now - lsRn > 1000) 
     {   
@@ -701,7 +701,7 @@ void blinkBlock()
     sprintf(timeBuff, "%02d:%02d:%02d", rtcNow.Hour(), rtcNow.Minute(),rtcNow.Second());
     
     fType(3);
-    dwCtr(0, 16, timeBuff);
+    dwCtr(0, 9, timeBuff);
 
     // Update countdown setiap detik
     if (now - lsRn > 1000)

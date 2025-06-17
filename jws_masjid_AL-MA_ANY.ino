@@ -59,8 +59,8 @@ RtcDateTime now;
 Prayer JWS;
 Hijriyah Hijir;
 
-uint8_t iqomah[]        = {5,1,5,5,5,2,5};
-uint8_t displayBlink[]  = {5,0,5,5,5,5,5};
+uint8_t iqomah[]        = {1,1,5,5,5,2,5};
+uint8_t displayBlink[]  = {1,0,5,5,5,5,5};
 uint8_t dataIhty[]      = {3,0,3,3,0,3};
 
 struct Config {
@@ -470,7 +470,7 @@ for(int i = 0; i < 4; i++)
 void loop() {
   
 // stateMode == 1? ArduinoOTA.handle() : server.handleClient();
-// check();
+  check();
   islam();
 
  switch(show){
@@ -499,7 +499,7 @@ void loop() {
   break;
   
   case ANIM_ADZAN :
-//    drawAzzan();
+    drawAzzan();
   break;
 
   case ANIM_IQOMAH :
