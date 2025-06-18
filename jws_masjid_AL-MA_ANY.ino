@@ -6,7 +6,7 @@
 
 
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
+//#include <ESP8266WebServer.h>
 //////////
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
@@ -25,7 +25,7 @@ const char* idwifi = "KELUARGA02";
 const char* passwifi = "suhartono";
 const char* host = "JAM_PANEL";
 
-ESP8266WebServer server(80);
+//ESP8266WebServer server(80);
 
 #include <Wire.h>
 #include <RtcDS3231.h>
@@ -77,7 +77,7 @@ Config config;
 
 
 // Variabel untuk waktu, tanggal, teks berjalan, tampilan ,dan kecerahan
-char text1[101], text2[101];
+char text1[101], text2[101],name[101];
 uint16_t   brightness    = 50;
 bool       adzan         = 0;
 bool       stateBuzzer   = 1;
@@ -87,17 +87,17 @@ uint8_t    sholatNow     = -1;
 bool       reset_x       = 0; 
 
 /*======library tambahan=======*/
-bool flagAnim = false;
+//bool       flagAnim = false;
 uint8_t    speedDate      = 40; // Kecepatan default date
 uint8_t    speedText1     = 40; // Kecepatan default text  
 uint8_t    speedText2     = 40;
 float      dataFloat[10];
 int        dataInteger[10];
-uint8_t    indexText;
+//uint8_t    indexText;
 uint8_t    list,lastList;
 bool       stateMode       = 0;
 bool       stateBuzzWar    = 0;
-uint8_t       counterName     = 0;
+uint8_t    counterName     = 0;
 /*============== end ================*/
 
 enum Show{
@@ -157,6 +157,7 @@ Show show = ANIM_CLOCK_BIG;
 #define ADDR_DURASIADZAN 248
 #define ADDR_CORRECTION  250
 #define ADDR_MODE        256
+#define ADDR_NAME        258
 
 
 void saveStringToEEPROM(int startAddr, String data, int maxLength) {
@@ -181,6 +182,7 @@ void saveIntToEEPROM(int addr, int16_t value) {
   EEPROM.write(addr + 1, highByte(value));
 }
 
+/*
 //----------------------web server---------------------------//
 // Fungsi untuk mengatur jam, tanggal, running text, dan kecerahan
 void handleSetTime() {
@@ -201,7 +203,13 @@ void handleSetTime() {
     getData(data);
     server.send(200, "text/plain", "OK");//"Settingan text berhasil diupdate");
   }
-  
+  if (server.hasArg("name")) {
+    data = server.arg("name");
+    data = "name=" + data;
+    Serial.println(data);
+    getData(data);
+    server.send(200, "text/plain", "OK");//"Settingan nama berhasil diupdate");
+  }
   if (server.hasArg("Br")) {
     data  = server.arg("Br");
     data = "Br=" + data;
@@ -321,8 +329,25 @@ void handleSetTime() {
     } 
   data="";
   }
-  
+ 
 //=============================================================//
+*/
+
+// Fungsi untuk mengatur jam, tanggal, running text, dan kecerahan dari Serial
+void handleSetTimeSerial() {
+  if (!Serial.available()) return;
+
+  String input = Serial.readStringUntil('\n');
+  input.trim(); // hapus spasi dan newline
+
+  if (input.length() == 0) return;
+
+  Serial.print("Input diterima: ");
+  Serial.println(input);
+
+  // Panggil fungsi getData() untuk memproses input
+  getData(input);
+}
 
 //----------------------------------------------------------------------
 // HJS589 P10 FUNGSI TAMBAHAN UNTUK NODEMCU ESP8266
@@ -349,7 +374,7 @@ void Disp_init_esp() {
 IPAddress local_IP(192, 168, 2, 1);      // IP Address untuk AP
 IPAddress gateway(192, 168, 2, 1);       // Gateway
 IPAddress subnet(255, 255, 255, 0);      // Subnet mask
-
+/*
 void AP_init() {
   
   WiFi.mode(WIFI_AP);
@@ -366,7 +391,7 @@ void AP_init() {
   server.begin();
   
   Serial.println("Server dimulai.");  
-}
+}*/
 
 void ONLINE(){
 
@@ -469,7 +494,7 @@ for(int i = 0; i < 4; i++)
 
 void loop() {
   
-// stateMode == 1? ArduinoOTA.handle() : server.handleClient();
+  stateMode == 1? ArduinoOTA.handle() : handleSetTimeSerial();
   check();
   islam();
 
@@ -558,6 +583,21 @@ void getData(String input) {
           pesan.toCharArray(text2, 101);
           saveStringToEEPROM(ADDR_TEXT2, String(text2), 100);
         }
+      }
+      Buzzer(1);
+      delay(500);
+      ESP.restart();
+    }
+
+    else if (key == "name") {
+      int separatorIndex = value.indexOf('-');
+      if (separatorIndex != -1) {
+        String pesan = value.substring(separatorIndex + 1);
+
+        if (pesan.length() > 100) pesan = pesan.substring(0, 100);
+          pesan.toCharArray(name, 101);
+          saveStringToEEPROM(ADDR_NAME, String(name), 100);
+         
       }
       Buzzer(1);
       delay(500);
@@ -659,7 +699,7 @@ void getData(String input) {
       if (value.length() == 8) {
         value.toCharArray(password, value.length() + 1);
         saveStringToEEPROM(ADDR_PASSWORD, value, 8);
-        server.send(200, "text/plain", "Password WiFi diupdate");
+        //server.send(200, "text/plain", "Password WiFi diupdate");
         Buzzer(1);
         delay(500);
         ESP.restart();
@@ -687,6 +727,13 @@ void loadFromEEPROM() {
   }
   Serial.print("Text2: ");
   Serial.println(text2);
+
+  for (int i = 0; i < 100; i++) {
+    name[i] = EEPROM.read(ADDR_NAME + i);
+    if (name[i] == 0) break;
+  }
+  Serial.print("nama: ");
+  Serial.println(name);
 
   brightness = EEPROM.read(ADDR_BRIGHTNESS);
   Serial.print("Brightness: ");
@@ -781,6 +828,7 @@ void loadFromEEPROM() {
   Serial.println(config.Correction);
 
   Serial.println("=== Selesai Membaca EEPROM ===\n");
+  Serial.println("OK");
 }
 
  //----------------------------------------------------------------------

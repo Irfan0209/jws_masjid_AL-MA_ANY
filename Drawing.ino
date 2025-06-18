@@ -1,8 +1,7 @@
-//const char msg[] PROGMEM = "MUSHOLLAH HIDAYATULLAH RT19/RW03,DODOKAN,TANJUNGSARI";
 const char * const pasar[] PROGMEM = {"WAGE", "KLIWON", "LEGI", "PAHING", "PON"}; 
 const char * const Hari[] PROGMEM = {"MINGGU","SENIN","SELASA","RABU","KAMIS","JUM'AT","SABTU"};
 const char * const bulanMasehi[] PROGMEM = {"JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER" };
-//const char msg1[] PROGMEM ="SAIPUL,SANIYAH,MUSY'IROH,ACHMAD";
+const char* jadwal[] PROGMEM = {"SUBUH", "TERBIT", "DHUHA", "DZUHUR", "ASHAR", "MAGRIB", "ISYA'"};
 const char * const namaBulanHijriah[] PROGMEM = {
     "MUHARRAM", "SHAFAR", "RABIUL AWAL",
     "RABIUL AKHIR", "JUMADIL AWAL", 
@@ -10,41 +9,9 @@ const char * const namaBulanHijriah[] PROGMEM = {
     "SYA'BAN", "RAMADHAN", "SYAWAL",
     "DZULQA'DAH", "DZULHIJAH"
 };
-//const char jadwal[][8] PROGMEM = {
-//    "SUBUH ", "TERBIT ", "DZUHUR ", "ASHAR ", 
-//    "TRBNM ", "MAGRIB ", "ISYA' "
-//  };
 
 
 //================= tampilan animasi ==================//
-/*
-void runAnimasiJam(){
-  
-  RtcDateTime now = Rtc.GetDateTime();
-  static int    y=0;
-  static bool    s; // 0=in, 1=out              
-  static uint32_t   lsRn;
-  uint32_t          Tmr = millis();
-  uint8_t dot    = now.Second();
-  char buff_jam[20];
-  
-  if(dot & 1){sprintf(buff_jam,"%02d:%02d",now.Hour(),now.Minute());}
-  else{sprintf(buff_jam,"%02d %02d",now.Hour(),now.Minute());}
-  
-  if((Tmr-lsRn)>75) 
-      { 
-        if(s==0 and y<9 ){lsRn=Tmr;y++; }
-        if(s==1 and y>0){lsRn=Tmr;y--; if(y == 1){ Disp.drawText(0,0, "          "); }}
-      }
-  
-   if(y ==9 and flagAnim == true) {s=1;}
-
-   if (y == 0 and s==1) {y=0; s=0; flagAnim = false; show = ANIM_SHOLAT;}
-  
-  fType(5); 
-  dwCtr(0,y-9, buff_jam); 
-
-}*/
 
 void drawDate(){
   static uint16_t x;
@@ -221,81 +188,6 @@ void scrollText(){
 }
 }
 
-//void drawJadwalSholat(){
-//  RtcDateTime now = Rtc.GetDateTime();
-//  static int        y=0;
-//  static int        y1=0;
-//  static uint8_t    s=0; // 0=in, 1=out   
-//  static uint8_t    s1=0;
-//  static bool       run = false;
-//  
-//  float sholatT[]={JWS.floatSubuh,JWS.floatTerbit,JWS.floatDhuha,JWS.floatDzuhur,JWS.floatAshar,JWS.floatMaghrib,JWS.floatIsya};
-//
-//  static uint32_t   lsRn;
-//  uint32_t          Tmr = millis(); 
-//  
-//  const char *jadwal[] = {"SUBUH","TERBIT","DHUHA", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
-//  char buff_jadwal[6];
-//  char Ja[3];
-//  char Min[3];
-//  char De[3];
-//  
-//  sprintf(Ja,"%02d",now.Hour());
-//  sprintf(Min,"%02d",now.Minute());
-//  sprintf(De,"%02d",now.Second());
-//
-//if((Tmr-lsRn)>55) 
-//  { 
-//    if(s1==0 and y1<17){lsRn=Tmr; Disp.drawLine(26,y1,26,y1,1);  y1++;}
-//      if(s1==1 and y1>0){lsRn=Tmr;  
-//        Disp.drawLine(14,25-y1,25,25-y1,0);//detik
-//        Disp.drawLine(0,y1-2,12,y1-2,0); //jam
-//        Disp.drawLine(14,y1-9,24,y1-9,0); //menit
-//        Disp.drawLine(26,y1,26,y1,0);
-//        y1--;
-//      }
-//  }
-//
-//if(y1==17 && s1==0){ run=true; }
-//
-//  fType(5);
-//  Disp.drawText(0,y1-17,Ja);
-//  
-//  fType(0);
-//  Disp.drawText(14,y1-17,Min);
-//  Disp.drawText(14,26-y1,De);//9
-//  
-//if((Tmr-lsRn)>55 && run == true) 
-//  { 
-//    if(s==0 and y<9){lsRn=Tmr; y++; }
-//    if(s==1 and y>0){lsRn=Tmr; y--; Disp.drawLine(28,17-y,64,17-y,0);}
-//  }
-//
-//  if((Tmr-lsRn)>4000 and y == 9) { s=1;}
-//
-//  if (y==0 && s==1) { 
-//    s=0;
-//    Disp.drawLine(27,0,64,0,0);
-//    list++; 
-//    if(list==7){run=false; list=0; s1=1;  }
-//  }
-//
-//  float stime = sholatT[list];
-//  uint8_t shour = floor(stime);
-//  uint8_t sminute = floor((stime - (float)shour) * 60);
-//  uint8_t ssecond = floor((stime - (float)shour - (float)sminute / 60) * 3600);
-//
-//  sprintf(buff_jadwal, "%02d:%02d", shour, sminute);
-//  fType(0);
-//  dwCtr(28,y-9,jadwal[list]);
-//  dwCtr(30,18-y,buff_jadwal);
-//
-//  if(y1==0 && s1==1){s1=0;  show=ANIM_CLOCK_BIG;}
-//   
-//}
-// Letakkan di luar fungsi agar hemat stack RAM
-const char* jadwal[] PROGMEM = {"SUBUH", "TERBIT", "DHUHA", "DZUHUR", "ASHAR", "MAGRIB", "ISYA'"};
-
 void drawJadwalSholat() {
   RtcDateTime now = Rtc.GetDateTime();
   static int y = 0, y1 = 0;
@@ -429,41 +321,6 @@ void drawJadwalSholat() {
   }
 }
 
-
-void runningTextInfo() {
-  static uint16_t x = 0;
-  static uint32_t lsRn;
-  uint32_t Tmr = millis();
-  uint8_t Speed = speedText1;
-  
-//  char msg_buffer[50]; // Pastikan cukup besar untuk teks
-//  strcpy_P(msg_buffer, msg1); // Ambil teks dari Flash
-  //String msg_buffer = text;
-  // Hitung panjang teks hanya sekali
-  static uint16_t fullScroll = 0;
-  if (fullScroll == 0) { 
-    fullScroll = Disp.textWidth(text1) + Disp.width() + 250;
-  }
-
-  // Jalankan animasi scrolling berdasarkan millis()
-  if (Tmr - lsRn > Speed && flagAnim == false) { 
-    lsRn = Tmr;
-    fType(0);
-    
-    int posX = Disp.width() - x;
-    if (posX < -Disp.textWidth(text1)) { // Cegah teks keluar layar
-      x = 0;
-      flagAnim = true;
-      fullScroll=0;
-      Disp.clear();
-      return;
-    }
-
-    Disp.drawText(posX, 9, text1);
-    x++; // Geser teks ke kiri
-  }
-}
-
 void anim_JG()
   {
     // check RunSelector
@@ -508,107 +365,12 @@ void anim_JG()
     
     }
 
-
-
-
-
-
-
 //======================= end ==========================//
 
-//==================== tampilkan jadwal sholat ====================//
-//void animasiJadwalSholat(){
-// 
-//  RtcDateTime now = Rtc.GetDateTime();
-//  static int        y=0;
-//  static int        x=0;
-//  static uint8_t    s=0; // 0=in, 1=out   
-//  static uint8_t    s1=0;
-//  
-//  float sholatT[]={JWS.floatSubuh,JWS.floatTerbit,JWS.floatDhuha,JWS.floatDzuhur,JWS.floatAshar,JWS.floatMaghrib,JWS.floatIsya};
-//  if(list != lastList){s=0; s1=0; x=0; y=0;lastList = list; }
-//
-//  static uint32_t   lsRn;
-//  uint32_t          Tmr = millis(); 
-//  
-//  const char *jadwal[] = {"SUBUH","TERBIT","DHUHA", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
-//  char buff_jam[10];
-//
-//  if((Tmr-lsRn)>55) 
-//  { 
-//    if(s1==0 and y<9){lsRn=Tmr; y++; }
-//    if(s==1 and x<33){lsRn=Tmr; x++; }
-//  }
-//
-//  if((Tmr-lsRn)>4000 and y == 9) {s1=1; s=1;}
-//
-//  if (x == 33 and s==1 and s1 == 1) { 
-//    s=0;
-//    s1=0;
-//    x=0;
-//    y=0;
-//    list++; 
-//    //Serial.println(config.latitude,6);
-//    if(list==7){list=0; Disp.clear(); show=ANIM_CLOCK_BIG; }
-//  }
-//}
-//
-// void drawText2(){
-//  static uint16_t x;
-//  static uint16_t fullScroll = 0;
-//  RtcDateTime now = Rtc.GetDateTime();
-//  static uint32_t   lsRn;
-//  uint32_t          Tmr = millis();
-//   
-//  uint8_t Speed = 50;//speedDate;
-//  uint8_t daynow   = now.DayOfWeek();    // load day Number
-//
-//  char  Buff[20];
-//    
-//  sprintf(Buff,"%02d:%02d:%02d",now.Hour(),now.Minute(),now.Second());
-//
-//    
-//  char buff_date[100]; // Pastikan ukuran buffer cukup besar
-//  snprintf(buff_date,sizeof(buff_date), "%s","test info 2");
-//  
-//  fType(0);
-//  if (fullScroll == 0) { // Hitung hanya sekali
-//    fullScroll = Disp.textWidth(buff_date) + Disp.width();
-//  }
-//
-// if (Tmr - lsRn > Speed) { 
-//  lsRn = Tmr;
-//  if (x < fullScroll) {++x; }
-//  else {x = 0; return;}
-//        
-//  
-//  if (x<=6)                     { dwCtr(0,x-6,Buff); }
-//  else if (x>=(fullScroll-6))   { dwCtr(0,(fullScroll-x)-6,Buff); }
-//  else                          { dwCtr(0,0,Buff); }  //posisi jam nya yang diatas
-//   
-//   //fType(0); //Marquee  running teks dibawah
-//   Disp.drawText(Disp.width() - x, 9 , buff_date);//runinng teks dibawah
-// }
-//
-//
-//  if(s1==0){
-//    fType(3);
-//    dwCtr(0,y-9, jadwal[list]);
-//    fType(0);
-//    dwCtr(0,18-y, buff_jam);
-//  }
-//  else{
-//    Disp.drawLine((list<6)?x-1:x,-1,(list<6)?x-1:x,16,1);
-//    Disp.drawLine((list<6)?x-2:x-1,-1,(list<6)?x-2:x-1,16,0);
-//  }
-//}
-
-//=========================================================================//
- 
 /*======================= animasi memasuki waktu sholat ====================================*/
 void drawAzzan()
 {
-    static const char *jadwal[] = {"SUBUH", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
+    //static const char *jadwal[] = {"SUBUH", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
     const char *sholat = jadwal[sholatNow]; 
     static uint8_t ct = 0;
     static uint32_t lsRn = 0;
