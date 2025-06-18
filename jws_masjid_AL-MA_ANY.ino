@@ -91,6 +91,7 @@ bool       reset_x       = 0;
 uint8_t    speedDate      = 40; // Kecepatan default date
 uint8_t    speedText1     = 40; // Kecepatan default text  
 uint8_t    speedText2     = 40;
+uint8_t    speedName      = 40;
 float      dataFloat[10];
 int        dataInteger[10];
 //uint8_t    indexText;
@@ -157,7 +158,8 @@ Show show = ANIM_CLOCK_BIG;
 #define ADDR_DURASIADZAN 248
 #define ADDR_CORRECTION  250
 #define ADDR_MODE        256
-#define ADDR_NAME        258
+#define ADDR_SPEEDNAME   258
+#define ADDR_NAME        260
 
 
 void saveStringToEEPROM(int startAddr, String data, int maxLength) {
@@ -229,14 +231,21 @@ void handleSetTime() {
     data = "Sptx1=" + data;
     Serial.println(data);
     getData(data);
-    server.send(200, "text/plain", "OK");//"Kecepatan nama 1 berhasil diupdate");
+    server.send(200, "text/plain", "OK");//"Kecepatan info 1 berhasil diupdate");
   }
   if (server.hasArg("Sptx2")) {
     data = server.arg("Sptx2"); // Atur kecepatan text
     data = "Sptx2=" + data;
     Serial.println(data);
     getData(data);
-    server.send(200, "text/plain", "OK");//"Kecepatan nama 2 berhasil diupdate");
+    server.send(200, "text/plain", "OK");//"Kecepatan info 2 berhasil diupdate");
+  }
+  if (server.hasArg("Spnm")) {
+    data = server.arg("Spnm"); // Atur kecepatan text
+    data = "Spnm=" + data;
+    Serial.println(data);
+    getData(data);
+    server.send(200, "text/plain", "OK");//"Kecepatan nama berhasil diupdate");
   }
   if (server.hasArg("Iq")) {
     data = server.arg("Iq"); // Atur koreksi iqomah
@@ -342,8 +351,8 @@ void handleSetTimeSerial() {
 
   if (input.length() == 0) return;
 
-  Serial.print("Input diterima: ");
-  Serial.println(input);
+//  Serial.print("Input diterima: ");
+//  Serial.println(input);
 
   // Panggil fungsi getData() untuk memproses input
   getData(input);
@@ -472,15 +481,15 @@ void setup() {
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
   //loadFromEEPROM();
-//  delay(1000);
-//  if(stateMode){
-//    show = UPLOAD;
-//    ONLINE();
-//  }else{
-//    Disp_init_esp();
-//    AP_init();
-//  }
-  Disp_init_esp();
+  delay(1000);
+  if(stateMode){
+    show = UPLOAD;
+    ONLINE();
+  }else{
+    Disp_init_esp();
+    //AP_init();
+  }
+ 
   delay(1000);
 for(int i = 0; i < 4; i++)
  {
@@ -626,6 +635,11 @@ void getData(String input) {
       saveIntToEEPROM(ADDR_SPEEDDT, speedDate);
     }
 
+    else if (key == "Spnm") {
+      speedName = map(value.toInt(), 0, 100, 10, 80);
+      saveIntToEEPROM(ADDR_SPEEDNAME, speedName);
+    }
+
     else if (key == "Lt") {
       config.latitude = roundf(value.toFloat() * 1000000.0) / 1000000.0;
       saveFloatToEEPROM(ADDR_LATITUDE, config.latitude);
@@ -750,6 +764,10 @@ void loadFromEEPROM() {
   speedDate = EEPROM.read(ADDR_SPEEDDT);
   Serial.print("Speed Date: ");
   Serial.println(speedDate);
+
+  speedName = EEPROM.read(ADDR_SPEEDNAME);
+  Serial.print("Speed Name: ");
+  Serial.println(speedName);
 
   // Latitude
   float latVal;

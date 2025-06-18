@@ -12,7 +12,7 @@ const char * const namaBulanHijriah[] PROGMEM = {
 
 
 //================= tampilan animasi ==================//
-
+/*
 void drawDate(){
   static uint16_t x;
   static uint16_t fullScroll = 0;
@@ -20,22 +20,21 @@ void drawDate(){
   static uint32_t   lsRn;
   uint32_t          Tmr = millis();
    
-  uint8_t Speed = 40;//speedDate;
+  uint8_t Speed = speedDate;
   uint8_t daynow   = now.DayOfWeek();    // load day Number
 
   char  Buff[20];
-    
+  char buff_date[100]; // Pastikan ukuran buffer cukup besar
+  
   sprintf(Buff,"%02d:%02d:%02d",now.Hour(),now.Minute(),now.Second());
 
-    
-  char buff_date[100]; // Pastikan ukuran buffer cukup besar
+  fType(0);
+  if (fullScroll == 0) { // Hitung hanya sekali
     snprintf(buff_date,sizeof(buff_date), "%s %s %02d %s %04d %02d %s %04dH",
     Hari[daynow], pasar[jumlahhari() % 5], now.Day(), bulanMasehi[now.Month()-1], now.Year(),
     Hijir.getHijriyahDate, namaBulanHijriah[Hijir.getHijriyahMonth - 1], Hijir.getHijriyahYear);
 
-  fType(0);
-  if (fullScroll == 0) { // Hitung hanya sekali
-    fullScroll = Disp.textWidth(buff_date) + Disp.width();
+    fullScroll = Disp.textWidth(buff_date) + Disp.width() + 20;
   }
 
  if (Tmr - lsRn > Speed) { 
@@ -51,7 +50,79 @@ void drawDate(){
    //fType(0); //Marquee  running teks dibawah
    Disp.drawText(Disp.width() - x, 9 , buff_date);//runinng teks dibawah
  }
+}*/
+
+void drawDate() {
+  static uint16_t x = 0;
+  static uint16_t fullScroll = 0;
+  static char buff_date[70];  // Cukup untuk semua teks tanggal
+  static char buff_time[9];   // HH:MM:SS
+  static uint32_t lsRn = 0;
+  static uint8_t lastSecond = 255; // untuk deteksi perubahan waktu
+
+  uint32_t Tmr = millis();
+  RtcDateTime now = Rtc.GetDateTime();
+  uint8_t Speed = speedDate;
+  uint8_t daynow = now.DayOfWeek();
+  fType(0);
+  // Hanya update teks waktu jika detik berubah
+  if (now.Second() != lastSecond) {
+    lastSecond = now.Second();
+    buff_time[0] = '0' + now.Hour() / 10;
+    buff_time[1] = '0' + now.Hour() % 10;
+    buff_time[2] = ':';
+    buff_time[3] = '0' + now.Minute() / 10;
+    buff_time[4] = '0' + now.Minute() % 10;
+    buff_time[5] = ':';
+    buff_time[6] = '0' + now.Second() / 10;
+    buff_time[7] = '0' + now.Second() % 10;
+    buff_time[8] = '\0';
+  }
+ 
+  // Jika belum hitung teks scrolling
+  if (fullScroll == 0) {
+    snprintf(buff_date, sizeof(buff_date), "%s %s %02d %s %04d %02d %s %04dH",
+      Hari[daynow],
+      pasar[jumlahhari() % 5],
+      now.Day(),
+      bulanMasehi[now.Month() - 1],
+      now.Year(),
+      Hijir.getHijriyahDate,
+      namaBulanHijriah[Hijir.getHijriyahMonth - 1],
+      Hijir.getHijriyahYear
+    );
+
+    fullScroll = Disp.textWidth(buff_date) + Disp.width() + 20;
+  }
+
+  // Waktu scroll
+  if (Tmr - lsRn > Speed) {
+    lsRn = Tmr;
+
+    if (x < fullScroll) {
+      ++x;
+    } else {
+      x = 0;
+      fullScroll = 0; // Reset agar hitung ulang saat tanggal berubah
+      show = ANIM_NAME;
+      Disp.drawLine(0, 0, 64, 0, 0);
+      return;
+    }
+
+    // Gambar waktu
+    if (x <= 6) {
+      dwCtr(0, x - 6, buff_time);
+    } else if (x >= (fullScroll - 6)) {
+      dwCtr(0, (fullScroll - x) - 6, buff_time);
+    } else {
+      dwCtr(0, 0, buff_time);
+    }
+   
+    // Gambar tanggal berjalan
+    Disp.drawText(Disp.width() - x, 9, buff_date);
+  }
 }
+
 
 void drawName(){
   static uint16_t x;
@@ -60,7 +131,7 @@ void drawName(){
   static uint32_t   lsRn;
   uint32_t          Tmr = millis();
    
-  uint8_t Speed = 40;//speedDate;
+  uint8_t Speed = speedName;
   uint8_t daynow   = now.DayOfWeek();    // load day Number
 
   char  Buff[20];
@@ -96,7 +167,7 @@ void drawText1(){
   static uint32_t   lsRn;
   uint32_t          Tmr = millis();
    
-  uint8_t Speed = 40;//speedDate;
+  uint8_t Speed = speedText1;
   uint8_t daynow   = now.DayOfWeek();    // load day Number
 
   char  Buff[20];
@@ -134,7 +205,7 @@ void drawText2(){
   static uint32_t   lsRn;
   uint32_t          Tmr = millis();
    
-  uint8_t Speed = 40;//speedDate;
+  uint8_t Speed = speedText2;
   uint8_t daynow   = now.DayOfWeek();    // load day Number
 
   char  Buff[20];
@@ -170,7 +241,7 @@ void scrollText(){
   static uint16_t fullScroll = 0;
   static uint32_t   lsRn;
   uint32_t          Tmr = millis();
-  uint8_t Speed = 30;//speedDate;
+  uint8_t Speed = speedName;
   char buff_date[]="MASJID AL MA ANY TANJUNGSARI";
 
   fType(4);
