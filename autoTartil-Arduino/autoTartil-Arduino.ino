@@ -5,16 +5,19 @@
   - Arduino UNO: membaca konfigurasi via Serial, menyimpan konfigurasi dalam array
   - Arduino mengatur jadwal berdasarkan waktu dan memutar rekaman tartil dan adzan
   - DFPlayer Mini: memainkan file tartil & adzan
+  - Relay: mengaktifkan power amplifier saat audio diputar, dimatikan setelah delay
 */
 
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 #include <EEPROM.h>
+#include <TimeLib.h>
 
-SoftwareSerial dfSerial(2, 3); // RX, TX ke DFPlayer
+SoftwareSerial dfSerial(2, 3);
 DFRobotDFPlayerMini dfplayer;
 
-#define HARI_TOTAL 8 // 7 hari + SemuaHari (index ke-7)
+#define RELAY_PIN 7
+#define HARI_TOTAL 8
 #define WAKTU_TOTAL 5
 #define MAX_FILE 11
 #define MAX_FOLDER 10
@@ -32,7 +35,7 @@ struct WaktuConfig {
 WaktuConfig jadwal[HARI_TOTAL][WAKTU_TOTAL];
 uint16_t durasiAdzan[MAX_FILE];
 uint16_t durasiTartil[MAX_FOLDER][MAX_FILE];
-byte volumeDFPlayer = 25;
+byte volumeDFPlayer = 20;
 
 uint8_t jamSholat[WAKTU_TOTAL] = {4, 12, 15, 18, 19};
 uint8_t menitSholat[WAKTU_TOTAL] = {30, 0, 30, 0, 30};
@@ -48,31 +51,40 @@ WaktuConfig *currentCfg = nullptr;
 
 unsigned long lastTriggerMillis = 0;
 bool sudahEksekusi = false;
+bool adzanSedangDiputar = false;
+unsigned long adzanMulaiMillis = 0;
+uint16_t adzanDurasi = 0;
 
-uint8_t currentHour = 0;
-uint8_t currentMinute = 0;
-uint8_t currentDay = 0;
+byte currentDay = 0;
+
+// Tambahan untuk relay delay dan manual
+unsigned long relayOffDelayMillis = 0;
+bool relayMenungguMati = false;
+bool manualSedangDiputar = false;
 
 void setup() {
-  Serial.begin(115200);
-  dfSerial.begin(115200);
-  loadFromEEPROM();
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
+
+  Serial.begin(9600);
+  dfSerial.begin(9600);
 
   if (!dfplayer.begin(dfSerial)) {
     Serial.println("DFPlayer tidak terdeteksi!");
     while (1);
   }
+
   dfplayer.volume(volumeDFPlayer);
   Serial.println("Sistem Auto Tartil Siap.");
 }
 
 void loop() {
-  if (sudahEksekusi && millis() - lastTriggerMillis > 60000) {
-    sudahEksekusi = false;
-  }
+  if (sudahEksekusi && millis() - lastTriggerMillis > 60000) sudahEksekusi = false;
   bacaDataSerial();
   cekDanPutarSholatNonBlocking();
   cekSelesaiTartil();
+  cekSelesaiAdzan();
+  cekRelayOffDelay();
 }
 
 void bacaDataSerial() {
@@ -89,71 +101,42 @@ void bacaDataSerial() {
 }
 
 void parseData(String data) {
-  // Sinkronisasi waktu otomatis dan validasi jam
   if (data.startsWith("TIME:")) {
-    // Format: TIME:HH,MM,DD (DD: 0=Ahad, 1=Senin, ..., 6=Sabtu)
     int idx = 5;
     uint8_t jam = getIntPart(data, idx);
     uint8_t menit = getIntPart(data, idx);
     uint8_t hari = getIntPart(data, idx);
     if (jam < 24 && menit < 60 && hari < 7) {
-      currentHour = jam;
-      currentMinute = menit;
+      setTime(jam, menit, 0, 1, 1, 2024);
       currentDay = hari;
     }
     return;
   }
-  if (data.startsWith("VOL:")) {
-    volumeDFPlayer = data.substring(4).toInt();
-    dfplayer.volume(volumeDFPlayer);
-    saveToEEPROM();
-    return;
-  }
-
-  if (data.startsWith("TIME:")) {
-    // Format: TIME:HH,MM,DD (DD: 0=Ahad, 1=Senin, ..., 6=Sabtu)
+  if (data.startsWith("PLAY:")) {
     int idx = 5;
-    currentHour = getIntPart(data, idx);
-    currentMinute = getIntPart(data, idx);
-    currentDay = getIntPart(data, idx);
+    byte folder = getIntPart(data, idx);
+    byte file = getIntPart(data, idx);
+    if (folder >= 1 && folder <= MAX_FOLDER && file >= 1 && file < MAX_FILE) {
+      dfplayer.playFolder(folder, file);
+      digitalWrite(RELAY_PIN, HIGH);
+      relayOffDelayMillis = millis() + (getDurasiTartil(folder, file) * 1000);
+      relayMenungguMati = true;
+      manualSedangDiputar = true;
+    }
     return;
   }
-
-  // Format: HR:<hari>|W:<waktu>,aktif,aktifAdzan,fileAdzan,tartilDulu,durasiTartil,folder,list1-list2-list3
-  if (data.startsWith("HR:")) {
-    int idxHR = data.indexOf("HR:");
-    int idxW = data.indexOf("|W:");
-    if (idxHR == -1 || idxW == -1) return;
-
-    int hari = data.substring(idxHR + 3, idxW).toInt();
-    String segmen = data.substring(idxW + 3);
-
-    int koma = 0;
-    byte waktuIdx = getIntPart(segmen, koma);
-    if (waktuIdx >= WAKTU_TOTAL) return;
-
-    WaktuConfig &cfg = jadwal[hari][waktuIdx];
-    cfg.aktif       = getIntPart(segmen, koma);
-    cfg.aktifAdzan  = getIntPart(segmen, koma);
-    cfg.fileAdzan   = getIntPart(segmen, koma);
-    cfg.tartilDulu  = getIntPart(segmen, koma);
-    cfg.durasiTartil= getIntPart(segmen, koma);
-    cfg.folder      = getIntPart(segmen, koma);
-
-    String listStr = segmen.substring(koma);
-    for (int i = 0; i < 3; i++) {
-      int dash = listStr.indexOf('-');
-      if (dash == -1 && listStr.length() > 0) {
-        cfg.list[i] = listStr.toInt();
-        break;
-      } else if (dash != -1) {
-        cfg.list[i] = listStr.substring(0, dash).toInt();
-        listStr = listStr.substring(dash + 1);
-      } else {
-        cfg.list[i] = 0;
-      }
-    }
-    saveToEEPROM();
+  if (data.startsWith("PAUSE")) {
+    dfplayer.pause();
+    return;
+  }
+  if (data.startsWith("STOP")) {
+    dfplayer.stop();
+    relayOffDelayMillis = millis();
+    relayMenungguMati = true;
+    tartilSedangDiputar = false;
+    adzanSedangDiputar = false;
+    manualSedangDiputar = false;
+    return;
   }
 }
 
@@ -177,18 +160,21 @@ uint16_t getDurasiAdzan(byte file) {
 
 void cekDanPutarSholatNonBlocking() {
   int hariIdx = currentDay;
-
   for (int w = 0; w < WAKTU_TOTAL; w++) {
-    if (currentHour == jamSholat[w] && currentMinute == menitSholat[w] && !sudahEksekusi) {
-      WaktuConfig &cfg = jadwal[hariIdx][w];
-      if (!cfg.aktif || tartilSedangDiputar) return;
-
-      if (cfg.tartilDulu) {
+    WaktuConfig &cfg = jadwal[hariIdx][w];
+    if (!cfg.aktif || tartilSedangDiputar || adzanSedangDiputar) continue;
+    uint16_t totalDurasiTartil = 0;
+    for (int i = 0; i < 3; i++) {
+      if (cfg.list[i] > 0) totalDurasiTartil += getDurasiTartil(cfg.folder, cfg.list[i]);
+    }
+    int nowDetik = hour() * 3600 + minute() * 60 + second();
+    int targetDetik = jamSholat[w] * 3600 + menitSholat[w] * 60 - totalDurasiTartil;
+    if (nowDetik == targetDetik && !sudahEksekusi) {
+      digitalWrite(RELAY_PIN, HIGH);
+      if (cfg.tartilDulu && totalDurasiTartil > 0) {
         tartilCount = 0;
         for (byte i = 0; i < 3; i++) {
-          if (cfg.list[i] > 0) {
-            tartilList[tartilCount++] = cfg.list[i];
-          }
+          if (cfg.list[i] > 0) tartilList[tartilCount++] = cfg.list[i];
         }
         if (tartilCount > 0) {
           tartilIndex = 0;
@@ -201,6 +187,12 @@ void cekDanPutarSholatNonBlocking() {
         }
       } else if (cfg.aktifAdzan) {
         dfplayer.play(cfg.fileAdzan);
+        adzanMulaiMillis = millis();
+        adzanDurasi = getDurasiAdzan(cfg.fileAdzan) * 1000;
+        adzanSedangDiputar = true;
+      } else {
+        relayOffDelayMillis = millis();
+        relayMenungguMati = true;
       }
       lastTriggerMillis = millis();
       sudahEksekusi = true;
@@ -220,23 +212,30 @@ void cekSelesaiTartil() {
       tartilSedangDiputar = false;
       if (currentCfg && currentCfg->aktifAdzan) {
         dfplayer.play(currentCfg->fileAdzan);
+        adzanMulaiMillis = millis();
+        adzanDurasi = getDurasiAdzan(currentCfg->fileAdzan) * 1000;
+        adzanSedangDiputar = true;
+      } else {
+        relayOffDelayMillis = millis();
+        relayMenungguMati = true;
       }
     }
   }
 }
 
-void loadFromEEPROM() {
-  int addr = 0;
-  EEPROM.get(addr, jadwal); addr += sizeof(jadwal);
-  EEPROM.get(addr, durasiAdzan); addr += sizeof(durasiAdzan);
-  EEPROM.get(addr, durasiTartil); addr += sizeof(durasiTartil);
-  EEPROM.get(addr, volumeDFPlayer); addr += sizeof(volumeDFPlayer);
+void cekSelesaiAdzan() {
+  if (!adzanSedangDiputar) return;
+  if (millis() - adzanMulaiMillis >= adzanDurasi) {
+    adzanSedangDiputar = false;
+    relayOffDelayMillis = millis();
+    relayMenungguMati = true;
+  }
 }
 
-void saveToEEPROM() {
-  int addr = 0;
-  EEPROM.put(addr, jadwal); addr += sizeof(jadwal);
-  EEPROM.put(addr, durasiAdzan); addr += sizeof(durasiAdzan);
-  EEPROM.put(addr, durasiTartil); addr += sizeof(durasiTartil);
-  EEPROM.put(addr, volumeDFPlayer); addr += sizeof(volumeDFPlayer);
+void cekRelayOffDelay() {
+  if (relayMenungguMati && millis() - relayOffDelayMillis >= 3000) {
+    digitalWrite(RELAY_PIN, LOW);
+    relayMenungguMati = false;
+    manualSedangDiputar = false;
+  }
 }
