@@ -9,12 +9,10 @@
 
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
-#include <TimeLib.h>  //<RTClib.h>
 #include <EEPROM.h>
 
-SoftwareSerial dfSerial(10, 11); // RX, TX ke DFPlayer
+SoftwareSerial dfSerial(2, 3); // RX, TX ke DFPlayer
 DFRobotDFPlayerMini dfplayer;
-//RTC_DS3231 rtc;
 
 #define HARI_TOTAL 8 // 7 hari + SemuaHari (index ke-7)
 #define WAKTU_TOTAL 5
@@ -51,10 +49,13 @@ WaktuConfig *currentCfg = nullptr;
 unsigned long lastTriggerMillis = 0;
 bool sudahEksekusi = false;
 
+uint8_t currentHour = 0;
+uint8_t currentMinute = 0;
+uint8_t currentDay = 0;
+
 void setup() {
-  Serial.begin(9600);
-  dfSerial.begin(9600);
-  //rtc.begin();
+  Serial.begin(115200);
+  dfSerial.begin(115200);
   loadFromEEPROM();
 
   if (!dfplayer.begin(dfSerial)) {
@@ -88,10 +89,33 @@ void bacaDataSerial() {
 }
 
 void parseData(String data) {
+  // Sinkronisasi waktu otomatis dan validasi jam
+  if (data.startsWith("TIME:")) {
+    // Format: TIME:HH,MM,DD (DD: 0=Ahad, 1=Senin, ..., 6=Sabtu)
+    int idx = 5;
+    uint8_t jam = getIntPart(data, idx);
+    uint8_t menit = getIntPart(data, idx);
+    uint8_t hari = getIntPart(data, idx);
+    if (jam < 24 && menit < 60 && hari < 7) {
+      currentHour = jam;
+      currentMinute = menit;
+      currentDay = hari;
+    }
+    return;
+  }
   if (data.startsWith("VOL:")) {
     volumeDFPlayer = data.substring(4).toInt();
     dfplayer.volume(volumeDFPlayer);
     saveToEEPROM();
+    return;
+  }
+
+  if (data.startsWith("TIME:")) {
+    // Format: TIME:HH,MM,DD (DD: 0=Ahad, 1=Senin, ..., 6=Sabtu)
+    int idx = 5;
+    currentHour = getIntPart(data, idx);
+    currentMinute = getIntPart(data, idx);
+    currentDay = getIntPart(data, idx);
     return;
   }
 
@@ -152,11 +176,10 @@ uint16_t getDurasiAdzan(byte file) {
 }
 
 void cekDanPutarSholatNonBlocking() {
-  //DateTime now = rtc.now();
-  int hariIdx = weekday();//now.dayOfTheWeek();
+  int hariIdx = currentDay;
 
   for (int w = 0; w < WAKTU_TOTAL; w++) {
-    if (hour() == jamSholat[w] && minute() == menitSholat[w] && !sudahEksekusi) {
+    if (currentHour == jamSholat[w] && currentMinute == menitSholat[w] && !sudahEksekusi) {
       WaktuConfig &cfg = jadwal[hariIdx][w];
       if (!cfg.aktif || tartilSedangDiputar) return;
 
