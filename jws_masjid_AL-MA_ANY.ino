@@ -6,7 +6,7 @@
 
 
 #include <ESP8266WiFi.h>
-//#include <ESP8266WebServer.h>
+#include <WiFiManager.h>
 //////////
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
@@ -15,6 +15,8 @@
 #include <DMDESP.h>
 #include <ESP_EEPROM.h>
 DMDESP  Disp(DISPLAYS_WIDE, DISPLAYS_HIGH);  // Jumlah Panel P10 yang digunakan (KOLOM,BARIS)
+
+WiFiManager wm; // global wm instance
 
 // Pengaturan hotspot WiFi dari ESP8266
 char ssid[20]     = "JAM_PANEL";
@@ -59,8 +61,8 @@ RtcDateTime now;
 Prayer JWS;
 Hijriyah Hijir;
 
-uint8_t iqomah[]        = {1,1,5,5,5,2,5};
-uint8_t displayBlink[]  = {1,0,5,5,5,5,5};
+uint8_t iqomah[]        = {1,1,1,1,1,1};
+uint8_t displayBlink[]  = {1,1,1,1,1,1};
 uint8_t dataIhty[]      = {3,0,3,3,0,3};
 
 struct Config {
@@ -94,11 +96,12 @@ uint8_t    speedText2     = 40;
 uint8_t    speedName      = 40;
 float      dataFloat[10];
 int        dataInteger[10];
-//uint8_t    indexText;
+bool       stateSendSholat = false; 
 uint8_t    list,lastList;
 bool       stateMode       = 0;
 bool       stateBuzzWar    = 0;
 uint8_t    counterName     = 0;
+
 /*============== end ================*/
 
 enum Show{
@@ -406,13 +409,21 @@ void ONLINE(){
 
  WiFi.mode(WIFI_STA);
  WiFi.softAPConfig(local_IP, gateway, subnet);
- WiFi.begin(idwifi,passwifi);
- while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Connection Failed! Rebooting...");
-    digitalWrite(BUZZ,LOW);
-    delay(5000);
+ bool res = wm.autoConnect(ssid,password); // password protected ap
+
+  if(!res) { 
+    Serial.println("Failed to connect or hit timeout");
+    digitalWrite(BUZZ,LOW); 
+    delay(3000);  
     ESP.restart();
-  }
+  } 
+ //WiFi.begin(idwifi,passwifi);
+// while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+//    Serial.println("Connection Failed! Rebooting...");
+//    digitalWrite(BUZZ,LOW);
+//    delay(5000);
+//    ESP.restart();
+//  }
   
   ArduinoOTA.setHostname(host);
   ArduinoOTA.onStart([]() {
@@ -480,14 +491,15 @@ void setup() {
   Rtc.Begin();
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
-  //loadFromEEPROM();
+  loadFromEEPROM();
   delay(1000);
   if(stateMode){
     show = UPLOAD;
     ONLINE();
   }else{
     Disp_init_esp();
-    //AP_init();
+    Serial.println("PANEL_OK");
+    //stateSendSholat = true;
   }
  
   delay(1000);
@@ -554,6 +566,7 @@ void loop() {
 }
 
 void getData(String input) {
+
   int eq = input.indexOf('=');
   if (eq != -1) {
     String key = input.substring(0, eq);
@@ -573,7 +586,7 @@ void getData(String input) {
         uint8_t tanggal = value.substring(dash1 + 1, dash2).toInt();
         uint8_t bulan = value.substring(dash2 + 1, dash3).toInt();
         uint16_t tahun = value.substring(dash3 + 1).toInt();
-        Rtc.SetDateTime(RtcDateTime(tahun, bulan, tanggal, jam, menit, now.Second()));
+        Rtc.SetDateTime(RtcDateTime(tahun, bulan, tanggal, jam, menit, 00));
       }
     }
 
@@ -709,7 +722,26 @@ void getData(String input) {
       ESP.restart();
     }
 
-    else if (key == "newPassword") {
+    else if (key == "status") {
+      int state = value.toInt();
+      if(state) Serial.println("PANEL_OK");
+    }
+
+    else if (key == "jadwal") {
+      stateSendSholat = value.toInt();
+    }
+
+    else if (key == "restart") {
+      int state = value.toInt();
+      if(state) {
+        Buzzer(1); 
+        Serial.println("RESTART_OK"); 
+        delay(3000);
+        ESP.restart();
+      }
+    }
+
+    else if (key == "passwordPanel") {
       if (value.length() == 8) {
         value.toCharArray(password, value.length() + 1);
         saveStringToEEPROM(ADDR_PASSWORD, value, 8);
@@ -722,6 +754,7 @@ void getData(String input) {
 
     EEPROM.commit(); // Penting! simpan perubahan
   }
+  
 }
 
 
@@ -945,7 +978,7 @@ void buzzerWarning(int cek){
       //Serial.println("active");
       if(con <= 6) { con++; }
       if(con == 7) { cek = 0; con = 0; state = false; stateBuzzWar = 0; }
-      Serial.println("con:" + String(con));
+      //Serial.println("con:" + String(con));
     } 
     
 }

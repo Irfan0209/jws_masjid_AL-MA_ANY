@@ -2,6 +2,7 @@ const char * const pasar[] PROGMEM = {"WAGE", "KLIWON", "LEGI", "PAHING", "PON"}
 const char * const Hari[] PROGMEM = {"MINGGU","SENIN","SELASA","RABU","KAMIS","JUM'AT","SABTU"};
 const char * const bulanMasehi[] PROGMEM = {"JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER" };
 const char* jadwal[] PROGMEM = {"SUBUH", "TERBIT", "DHUHA", "DZUHUR", "ASHAR", "MAGRIB", "ISYA'"};
+const char* jadwalAzzan[] PROGMEM = {"SUBUH","DZUHUR", "ASHAR", "MAGRIB", "ISYA'"};
 const char * const namaBulanHijriah[] PROGMEM = {
     "MUHARRAM", "SHAFAR", "RABIUL AWAL",
     "RABIUL AKHIR", "JUMADIL AWAL", 
@@ -12,47 +13,9 @@ const char * const namaBulanHijriah[] PROGMEM = {
 
 
 //================= tampilan animasi ==================//
-/*
-void drawDate(){
-  static uint16_t x;
-  static uint16_t fullScroll = 0;
-  RtcDateTime now = Rtc.GetDateTime();
-  static uint32_t   lsRn;
-  uint32_t          Tmr = millis();
-   
-  uint8_t Speed = speedDate;
-  uint8_t daynow   = now.DayOfWeek();    // load day Number
-
-  char  Buff[20];
-  char buff_date[100]; // Pastikan ukuran buffer cukup besar
-  
-  sprintf(Buff,"%02d:%02d:%02d",now.Hour(),now.Minute(),now.Second());
-
-  fType(0);
-  if (fullScroll == 0) { // Hitung hanya sekali
-    snprintf(buff_date,sizeof(buff_date), "%s %s %02d %s %04d %02d %s %04dH",
-    Hari[daynow], pasar[jumlahhari() % 5], now.Day(), bulanMasehi[now.Month()-1], now.Year(),
-    Hijir.getHijriyahDate, namaBulanHijriah[Hijir.getHijriyahMonth - 1], Hijir.getHijriyahYear);
-
-    fullScroll = Disp.textWidth(buff_date) + Disp.width() + 20;
-  }
-
- if (Tmr - lsRn > Speed) { 
-  lsRn = Tmr;
-  if (x < fullScroll) {++x; }
-  else {x = 0; show=ANIM_NAME; Disp.drawLine(0,0,64,0,0); return;}
-        
-  
-  if (x<=6)                     { dwCtr(0,x-6,Buff); }
-  else if (x>=(fullScroll-6))   { dwCtr(0,(fullScroll-x)-6,Buff); }
-  else                          { dwCtr(0,0,Buff); }  //posisi jam nya yang diatas
-   
-   //fType(0); //Marquee  running teks dibawah
-   Disp.drawText(Disp.width() - x, 9 , buff_date);//runinng teks dibawah
- }
-}*/
 
 void drawDate() {
+  if(adzan) return;
   static uint16_t x = 0;
   static uint16_t fullScroll = 0;
   static char buff_date[70];  // Cukup untuk semua teks tanggal
@@ -125,6 +88,8 @@ void drawDate() {
 
 
 void drawName(){
+  if(adzan) return;
+  
   static uint16_t x;
   static uint16_t fullScroll = 0;
   RtcDateTime now = Rtc.GetDateTime();
@@ -161,6 +126,8 @@ void drawName(){
 }
 
 void drawText1(){
+  if(adzan) return;
+  
   static uint16_t x;
   static uint16_t fullScroll = 0;
   RtcDateTime now = Rtc.GetDateTime();
@@ -199,6 +166,8 @@ void drawText1(){
 }
 
 void drawText2(){
+  if(adzan) return;
+  
   static uint16_t x;
   static uint16_t fullScroll = 0;
   RtcDateTime now = Rtc.GetDateTime();
@@ -237,6 +206,8 @@ void drawText2(){
 }
 
 void scrollText(){
+  if(adzan) return;
+  
    static uint16_t x;
   static uint16_t fullScroll = 0;
   static uint32_t   lsRn;
@@ -260,6 +231,8 @@ void scrollText(){
 }
 
 void drawJadwalSholat() {
+  if(adzan) return;
+  
   RtcDateTime now = Rtc.GetDateTime();
   static int y = 0, y1 = 0;
   static uint8_t s = 0, s1 = 0;
@@ -394,12 +367,14 @@ void drawJadwalSholat() {
 
 void anim_JG()
   {
+    if(adzan) return;
     // check RunSelector
     //if(!dwDo(DrawAdd)) return; 
     RtcDateTime now = Rtc.GetDateTime();
     char  BuffJ[6];
     char  BuffM[6];
     char  BuffD[6];
+    uint8_t daynow = now.DayOfWeek();
     
     static byte    y;
     static bool    s; // 0=in, 1=out              
@@ -432,7 +407,7 @@ void anim_JG()
       }
 
     if((Tmr-lsRn)>5000 and y ==17) {s=1;}
-    if (y == 0 and s==1) { s=0; show=ANIM_DATE;}//dwDone(DrawAdd);
+    if (y == 0 and s==1) {Serial.println("TIME:" + String(BuffJ) + "," + String(BuffM) + "," + String(daynow)); s=0; show=ANIM_DATE;}//dwDone(DrawAdd);
     
     }
 
@@ -442,7 +417,7 @@ void anim_JG()
 void drawAzzan()
 {
     //static const char *jadwal[] = {"SUBUH", "DZUHUR", "ASHAR", "MAGRIB","ISYA'"};
-    const char *sholat = jadwal[sholatNow]; 
+    const char *sholat = jadwalAzzan[sholatNow]; 
     static uint8_t ct = 0;
     static uint32_t lsRn = 0;
     uint32_t Tmr = millis();
@@ -490,10 +465,10 @@ void drawIqomah()  // Countdown Iqomah (9 menit)
     scd = (cn_l - ct) % 60;
     sprintf(locBuff, "-%02d:%02d", mnt, scd);
 
-    if ((ct & 1) == 0) {  // Gunakan bitwise untuk optimasi modulo 2
+   // if ((ct & 1) == 0) {  // Gunakan bitwise untuk optimasi modulo 2
         fType(0);
         dwCtr(0, 0, "IQOMAH");
-    }
+    //}
 
     fType(0);
     dwCtr(0, 8, locBuff);
@@ -503,7 +478,7 @@ void drawIqomah()  // Countdown Iqomah (9 menit)
         lsRn = now;
         ct++;
 
-        Serial.println(F("test run"));  // Gunakan F() untuk hemat RAM
+        //Serial.println(F("test run"));  // Gunakan F() untuk hemat RAM
 
         if (ct > (cn_l - 5)) {
             Buzzer(ct & 1);  // Gunakan bitwise untuk menggantikan modulo 2
@@ -533,25 +508,19 @@ void blinkBlock()
     int mnt = (ct_l - ct) / 60;
     int scd = (ct_l - ct) % 60;
 
-//    char locBuff[6];
-//    sprintf(locBuff, " %d:%02d ", mnt, scd);
-
-//    fType(2);
-//    Disp.drawText(10, 8, locBuff);
-
     // Tampilkan jam besar
-    char timeBuff[9];
-    sprintf(timeBuff, "%02d:%02d:%02d", rtcNow.Hour(), rtcNow.Minute(),rtcNow.Second());
+    char timeBuff[6];
+    sprintf(timeBuff, "%02d:%02d", rtcNow.Hour(), rtcNow.Minute());
     
     fType(3);
-    dwCtr(0, 9, timeBuff);
+    Disp.drawText(0, 9, timeBuff);
 
     // Update countdown setiap detik
     if (now - lsRn > 1000)
     {
         lsRn = now;
-        Serial.print(F("ct:"));
-        Serial.println(ct);
+//        Serial.print(F("ct:"));
+//        Serial.println(ct);
         ct++;
     }
 
