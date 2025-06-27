@@ -374,7 +374,7 @@ void Disp_init_esp() {
   Disp.start();
   Disp.clear();
   Disp.setBrightness(brightness);
-  Serial.println("Setup dmd selesai");
+  //Serial.println("Setup dmd selesai");
 
   noInterrupts();
   timer0_isr_init();
@@ -612,15 +612,11 @@ void getData(String input) {
     }
 
     else if (key == "name") {
-      int separatorIndex = value.indexOf('-');
-      if (separatorIndex != -1) {
-        String pesan = value.substring(separatorIndex + 1);
+       if (value.length() > 100) {value = value.substring(0, 100);} // Batasi max 100 karakter
+       value.toCharArray(name, 101); // +1 untuk null-terminator
+       Serial.println(name);
+       saveStringToEEPROM(ADDR_NAME, String(name), 100);
 
-        if (pesan.length() > 100) pesan = pesan.substring(0, 100);
-          pesan.toCharArray(name, 101);
-          saveStringToEEPROM(ADDR_NAME, String(name), 100);
-         
-      }
       Buzzer(1);
       delay(500);
       ESP.restart();
@@ -759,48 +755,48 @@ void getData(String input) {
 
 
 void loadFromEEPROM() {
-  Serial.println("=== Membaca Data dari EEPROM ===");
+  //Serial.println("=== Membaca Data dari EEPROM ===");
  
   for (int i = 0; i < 100; i++) {
     text1[i] = EEPROM.read(ADDR_TEXT1 + i);
     if (text1[i] == 0) break;
   }
-  Serial.print("Text1: ");
-  Serial.println(text1);
+//  Serial.print("Text1: ");
+//  Serial.println(text1);
   
   for (int i = 0; i < 100; i++) {
     text2[i] = EEPROM.read(ADDR_TEXT2 + i);
     if (text2[i] == 0) break;
   }
-  Serial.print("Text2: ");
-  Serial.println(text2);
+//  Serial.print("Text2: ");
+//  Serial.println(text2);
 
   for (int i = 0; i < 100; i++) {
     name[i] = EEPROM.read(ADDR_NAME + i);
     if (name[i] == 0) break;
   }
-  Serial.print("nama: ");
-  Serial.println(name);
+//  Serial.print("nama: ");
+//  Serial.println(name);
 
   brightness = EEPROM.read(ADDR_BRIGHTNESS);
-  Serial.print("Brightness: ");
-  Serial.println(brightness);
+//  Serial.print("Brightness: ");
+//  Serial.println(brightness);
 
   speedText1 = EEPROM.read(ADDR_SPEEDTX1);
-  Serial.print("Speed Text1: ");
-  Serial.println(speedText1);
+//  Serial.print("Speed Text1: ");
+//  Serial.println(speedText1);
 
   speedText2 = EEPROM.read(ADDR_SPEEDTX2);
-  Serial.print("Speed Text2: ");
-  Serial.println(speedText2);
+//  Serial.print("Speed Text2: ");
+//  Serial.println(speedText2);
 
   speedDate = EEPROM.read(ADDR_SPEEDDT);
-  Serial.print("Speed Date: ");
-  Serial.println(speedDate);
+//  Serial.print("Speed Date: ");
+//  Serial.println(speedDate);
 
   speedName = EEPROM.read(ADDR_SPEEDNAME);
-  Serial.print("Speed Name: ");
-  Serial.println(speedName);
+//  Serial.print("Speed Name: ");
+//  Serial.println(speedName);
 
   // Latitude
   float latVal;
@@ -809,8 +805,8 @@ void loadFromEEPROM() {
     ptrLat[i] = EEPROM.read(ADDR_LATITUDE + i);
   }
   config.latitude = latVal;
-  Serial.print("Latitude: ");
-  Serial.println(config.latitude, 6);
+//  Serial.print("Latitude: ");
+//  Serial.println(config.latitude, 6);
 
   // Longitude
   float lonVal;
@@ -819,67 +815,67 @@ void loadFromEEPROM() {
     ptrLon[i] = EEPROM.read(ADDR_LONGITUDE + i);
   }
   config.longitude = lonVal;
-  Serial.print("Longitude: ");
-  Serial.println(config.longitude, 6);
+//  Serial.print("Longitude: ");
+//  Serial.println(config.longitude, 6);
 
   config.zonawaktu = EEPROM.read(ADDR_TZ) | (EEPROM.read(ADDR_TZ + 1) << 8);
-  Serial.print("Zona Waktu: ");
-  Serial.println(config.zonawaktu);
+//  Serial.print("Zona Waktu: ");
+//  Serial.println(config.zonawaktu);
 
   config.altitude = EEPROM.read(ADDR_ALTITUDE) | (EEPROM.read(ADDR_ALTITUDE + 1) << 8);
-  Serial.print("Altitude: ");
-  Serial.println(config.altitude);
+//  Serial.print("Altitude: ");
+//  Serial.println(config.altitude);
 
   for (int i = 0; i < 6; i++) {
     iqomah[i] = EEPROM.read(ADDR_IQOMAH + i);
-    Serial.print("Iqomah[");
-    Serial.print(i);
-    Serial.print("]: ");
-    Serial.println(iqomah[i]);
+//    Serial.print("Iqomah[");
+//    Serial.print(i);
+//    Serial.print("]: ");
+//    Serial.println(iqomah[i]);
   }
 
   for (int i = 0; i < 6; i++) {
     displayBlink[i] = EEPROM.read(ADDR_BLINK + i);
-    Serial.print("Blink[");
-    Serial.print(i);
-    Serial.print("]: ");
-    Serial.println(displayBlink[i]);
+//    Serial.print("Blink[");
+//    Serial.print(i);
+//    Serial.print("]: ");
+//    Serial.println(displayBlink[i]);
   }
 
   for (int i = 0; i < 6; i++) {
     dataIhty[i] = EEPROM.read(ADDR_IHTY + i);
-    Serial.print("Ihtiyath[");
-    Serial.print(i);
-    Serial.print("]: ");
-    Serial.println(dataIhty[i]);
+//    Serial.print("Ihtiyath[");
+//    Serial.print(i);
+//    Serial.print("]: ");
+//    Serial.println(dataIhty[i]);
   }
 
   stateBuzzer = EEPROM.read(ADDR_BUZZER);
-  Serial.print("Buzzer: ");
-  Serial.println(stateBuzzer);
+//  Serial.print("Buzzer: ");
+//  Serial.println(stateBuzzer);
 
   stateMode = EEPROM.read(ADDR_MODE);
-  Serial.print("mode: ");
-  Serial.println(stateMode);
+//  Serial.print("mode: ");
+//  Serial.println(stateMode);
 
   for (int i = 0; i < 8; i++) {
     password[i] = EEPROM.read(ADDR_PASSWORD + i);
   }
   password[8] = '\0';
-  Serial.print("Password: ");
-  Serial.println(password);
+//  Serial.print("Password: ");
+//  Serial.println(password);
 
   // Tambahan yang baru:
   config.durasiadzan = EEPROM.read(ADDR_DURASIADZAN) | (EEPROM.read(ADDR_DURASIADZAN + 1) << 8);
-  Serial.print("Durasi Adzan: ");
-  Serial.println(config.durasiadzan);
+//  Serial.print("Durasi Adzan: ");
+//  Serial.println(config.durasiadzan);
 
   config.Correction = EEPROM.read(ADDR_CORRECTION) | (EEPROM.read(ADDR_CORRECTION + 1) << 8);
-  Serial.print("Correction: ");
-  Serial.println(config.Correction);
+//  Serial.print("Correction: ");
+//  Serial.println(config.Correction);
 
-  Serial.println("=== Selesai Membaca EEPROM ===\n");
-  Serial.println("OK");
+//  Serial.println("=== Selesai Membaca EEPROM ===\n");
+//  Serial.println("OK");
 }
 
  //----------------------------------------------------------------------

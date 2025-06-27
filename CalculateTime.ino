@@ -7,6 +7,16 @@ void islam() {
     stateBuzzWar = 1;
   }
 
+  //redup
+  if(now.Hour() == 23 && now.Minute() == 00 && now.Second() == 00){
+    Disp.setBrightness(10);
+  }
+
+  //normal
+  if(now.Hour() == 02 && now.Minute() == 00 && now.Second() == 00){
+    Disp.setBrightness(brightness);
+  }
+
   JWS.Update(config.zonawaktu, config.latitude, config.longitude, config.altitude, now.Year(), now.Month(), now.Day()); // Jalankan fungsi ini untuk update jadwal sholat
   Hijir.Update(now.Year(), now.Month(), now.Day(), config.Correction);
   JWS.setIkhtiSu = dataIhty[0];

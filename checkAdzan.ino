@@ -4,6 +4,7 @@ void check() {
     uint8_t jam = now.Hour();
     uint8_t menit = now.Minute();
     uint8_t detik = now.Second();
+    uint8_t daynow = now.DayOfWeek();
     uint8_t hours, minutes;
     static uint8_t counter = 0,cekList = 0;
     static uint32_t lsTmr,saveTmr;
@@ -22,6 +23,10 @@ void check() {
     
         if (!adzanFlag[counter]) {
             if (jam == hours && menit == minutes && detik == 0) {
+                
+              if(daynow == 5 && counter == 1){
+                return ;
+              }else{
                 Disp.clear();
                 sholatNow = counter;
                 adzan = 1;
@@ -30,6 +35,8 @@ void check() {
                 lastList = 0;
                 show = ANIM_ADZAN;
                 adzanFlag[counter] = true;
+              }
+                
             }
         }
 
