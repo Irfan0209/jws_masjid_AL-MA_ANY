@@ -1,0 +1,26 @@
+HR:0|W:0,1,1,3,1,60,1,1-2-3
+
+TIME:04,30,0
+
+Artinya:
+
+Hari: Minggu (0)
+
+Waktu: Subuh (0)
+
+Aktif: ya
+
+Aktif Adzan: ya
+
+File Adzan: 3
+
+Tartil sebelum adzan: ya
+
+Durasi tartil: 60 detik (tidak dipakai kalau ambil dari durasiTartil)
+
+Folder: 1
+
+List rekaman: 1, 2, 3
+
+
+                                                                                                                                                                                                                                                                                   
