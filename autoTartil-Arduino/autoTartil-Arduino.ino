@@ -69,10 +69,11 @@ void setup() {
   Serial.begin(9600);
   dfSerial.begin(9600);
  // loadFromEEPROM();
-  durasiTartil[0][0] = 10; // Folder 1, File 1 = 10 detik
-  durasiTartil[0][1] = 12;
-  durasiTartil[0][2] = 8;
-  durasiAdzan[0]     = 15;
+  durasiTartil[0][0] = 0; // Folder 1, File 1 = 10 detik
+  durasiTartil[0][1] = 20;
+  durasiTartil[0][2] = 40;
+  durasiTartil[0][3] = 100;
+  durasiAdzan[1]     = 16;
 
   if (!dfplayer.begin(dfSerial)) {
     Serial.println("DFPlayer tidak terdeteksi!");
@@ -91,6 +92,8 @@ void loop() {
   cekSelesaiTartil();
   cekSelesaiAdzan();
   cekRelayOffDelay();
+  cekSelesaiManual();
+
 }
 
 void bacaDataSerial() {
@@ -160,33 +163,55 @@ void parseData(String data) {
     }
     saveToEEPROM();
   }
-  if (data.startsWith("PLAY:")) {
-    int idx = 5;
-    byte folder = getIntPart(data, idx);
-    byte file = getIntPart(data, idx);
-    if (folder >= 1 && folder <= MAX_FOLDER && file >= 1 && file < MAX_FILE) {
+ if (data.startsWith("PLAY:")) {
+  int idx = 5;
+  byte folder = getIntPart(data, idx);
+  byte file = getIntPart(data, idx);
+  if (folder >= 1 && folder <= MAX_FOLDER && file >= 1 && file < MAX_FILE) {
+    uint16_t durasi = getDurasiTartil(folder, file);
+    if (durasi > 0) {
       dfplayer.playFolder(folder, file);
+      Serial.print("Memutar manual: folder "); Serial.print(folder);
+      Serial.print(", file "); Serial.print(file);
+      Serial.print(", durasi "); Serial.print(durasi); Serial.println(" detik");
       digitalWrite(RELAY_PIN, HIGH);
-      relayOffDelayMillis = millis() + (getDurasiTartil(folder, file) * 1000);
-      relayMenungguMati = true;
+      tartilMulaiMillis = millis();
+      tartilDurasi = durasi * 1000;
+      tartilSedangDiputar = false;
+      adzanSedangDiputar = false;
       manualSedangDiputar = true;
+      relayMenungguMati = false; // Jangan matikan relay langsung, tunggu durasi selesai
+    } else {
+      Serial.println("Durasi file 0, tidak diputar.");
     }
-    return;
   }
-  if (data.startsWith("PAUSE")) {
-    dfplayer.pause();
-    return;
-  }
-  if (data.startsWith("STOP")) {
-    dfplayer.stop();
-    relayOffDelayMillis = millis();
-    relayMenungguMati = true;
-    tartilSedangDiputar = false;
-    adzanSedangDiputar = false;
-    manualSedangDiputar = false;
-    return;
+  return;
+}
+
+if (data.startsWith("STOP")) {
+  dfplayer.stop();
+  digitalWrite(RELAY_PIN, LOW);
+  relayMenungguMati = false;
+  tartilSedangDiputar = false;
+  adzanSedangDiputar = false;
+  manualSedangDiputar = false;
+  Serial.println("STOP: DFPlayer dan relay dimatikan");
+  return;
+}
+}
+// Tambahkan fungsi ini ke dalam loop()
+void cekSelesaiManual() {
+  if (manualSedangDiputar) {
+    if (millis() - tartilMulaiMillis >= tartilDurasi) {
+      manualSedangDiputar = false;
+      relayOffDelayMillis = millis();
+      relayMenungguMati = true;
+      Serial.println("Manual selesai, relay akan dimatikan setelah delay.");
+    }
   }
 }
+
+
 
 int getIntPart(String &s, int &pos) {
   int comma = s.indexOf(',', pos);
@@ -212,36 +237,40 @@ void cekDanPutarSholatNonBlocking() {
     WaktuConfig &cfg = jadwal[hariIdx][w];
     if (!cfg.aktif || tartilSedangDiputar || adzanSedangDiputar) continue;
     uint16_t totalDurasiTartil = 0;
-    for (int i = 0; i < 3; i++) {
-      if (cfg.list[i] > 0) totalDurasiTartil += getDurasiTartil(cfg.folder, cfg.list[i]);
+    tartilCount = 0;
+    for (byte i = 0; i < 3; i++) {
+      byte listFile = cfg.list[i];
+      uint16_t durasi = getDurasiTartil(cfg.folder, listFile);
+      if (listFile > 0 && durasi > 0) {
+        tartilList[tartilCount++] = listFile;
+        totalDurasiTartil += durasi;
+      }
     }
     int nowDetik = hour() * 3600 + minute() * 60 + second();
     int targetDetik = jamSholat[w] * 3600 + menitSholat[w] * 60 - totalDurasiTartil;
     if (nowDetik == targetDetik && !sudahEksekusi) {
       digitalWrite(RELAY_PIN, HIGH);
-      if (cfg.tartilDulu && totalDurasiTartil > 0) {
-        tartilCount = 0;
-        for (byte i = 0; i < 3; i++) { //rubah jumblah daftar list yang akan diputar
-          if (cfg.list[i] > 0) tartilList[tartilCount++] = cfg.list[i];
-        }
-        if (tartilCount > 0) {
-          tartilIndex = 0;
-          tartilFolder = cfg.folder;
-          currentCfg = &cfg;
-          dfplayer.playFolder(tartilFolder, tartilList[tartilIndex]);
-          tartilMulaiMillis = millis();
-          tartilDurasi = getDurasiTartil(tartilFolder, tartilList[tartilIndex]) * 1000;
-          tartilSedangDiputar = true;
-          Serial.println("tartilCount:" + String(tartilCount));
-        }
+      if (cfg.tartilDulu && tartilCount > 0) {
+        tartilIndex = 0;
+        tartilFolder = cfg.folder;
+        currentCfg = &cfg;
+        byte fileToPlay = tartilList[tartilIndex];
+        uint16_t durasi = getDurasiTartil(tartilFolder, fileToPlay);
+        dfplayer.playFolder(tartilFolder, fileToPlay);
+        Serial.print("Memutar tartil: folder "); Serial.print(tartilFolder);
+        Serial.print(", file "); Serial.print(fileToPlay);
+        Serial.print(", durasi "); Serial.print(durasi); Serial.println(" detik");
+        tartilMulaiMillis = millis();
+        tartilDurasi = durasi * 1000;
+        tartilSedangDiputar = true;
       } else if (cfg.aktifAdzan) {
-        dfplayer.playFolder(11,cfg.fileAdzan);
+        dfplayer.playFolder(11, cfg.fileAdzan);
         adzanMulaiMillis = millis();
         adzanDurasi = getDurasiAdzan(cfg.fileAdzan) * 1000;
         adzanSedangDiputar = true;
+        Serial.println("Memutar adzan.");
       } else {
-        relayOffDelayMillis = millis();
-        relayMenungguMati = true;
+        Serial.println("Tidak ada audio, menunggu relay mati.");
       }
       lastTriggerMillis = millis();
       sudahEksekusi = true;
@@ -254,109 +283,47 @@ void cekSelesaiTartil() {
   if (millis() - tartilMulaiMillis >= tartilDurasi) {
     tartilIndex++;
     if (tartilIndex < tartilCount) {
-      dfplayer.playFolder(tartilFolder, tartilList[tartilIndex]);
+      byte fileToPlay = tartilList[tartilIndex];
+      uint16_t durasi = getDurasiTartil(tartilFolder, fileToPlay);
+      dfplayer.playFolder(tartilFolder, fileToPlay);
+      Serial.print("Memutar tartil berikutnya: folder "); Serial.print(tartilFolder);
+      Serial.print(", file "); Serial.print(fileToPlay);
+      Serial.print(", durasi "); Serial.print(durasi); Serial.println(" detik");
       tartilMulaiMillis = millis();
-      tartilDurasi = getDurasiTartil(tartilFolder, tartilList[tartilIndex]) * 1000;
+      tartilDurasi = durasi * 1000;
     } else {
       tartilSedangDiputar = false;
       if (currentCfg && currentCfg->aktifAdzan) {
-        dfplayer.playFolder(11,currentCfg->fileAdzan);
+        dfplayer.playFolder(11, currentCfg->fileAdzan);
         adzanMulaiMillis = millis();
         adzanDurasi = getDurasiAdzan(currentCfg->fileAdzan) * 1000;
         adzanSedangDiputar = true;
-      }
-//      } else {
-//        relayOffDelayMillis = millis();
-//        relayMenungguMati = true;
-//      }
-    }
-  }
-}
-/*
-void cekDanPutarSholatNonBlocking() {
-  int hariIdx = currentDay;
-
-  for (int w = 0; w < WAKTU_TOTAL; w++) {
-    WaktuConfig &cfg = jadwal[hariIdx][w];
-    if (!cfg.aktif || tartilSedangDiputar || adzanSedangDiputar) continue;
-
-    uint16_t totalDurasiTartil = 0;
-    for (int i = 0; i < 3; i++) {
-      if (cfg.list[i] > 0) {
-        totalDurasiTartil += getDurasiTartil(cfg.folder, cfg.list[i]);
-      }
-    }
-
-    int nowDetik = hour() * 3600 + minute() * 60 + second();
-    int targetDetik = jamSholat[w] * 3600 + menitSholat[w] * 60 - totalDurasiTartil;
-
-    if (nowDetik == targetDetik && !sudahEksekusi) {
-      digitalWrite(RELAY_PIN, HIGH); // Aktifkan relay
-
-      if (cfg.tartilDulu && totalDurasiTartil > 0) {
-        tartilCount = 0;
-        for (byte i = 0; i < 3; i++) {
-          if (cfg.list[i] > 0) {
-            tartilList[tartilCount++] = cfg.list[i];
-          }
-        }
-        if (tartilCount > 0) {
-          tartilIndex = 0;
-          tartilFolder = cfg.folder;
-          currentCfg = &cfg;
-          dfplayer.playFolder(tartilFolder, tartilList[tartilIndex]);
-          tartilMulaiMillis = millis();
-          tartilDurasi = getDurasiTartil(tartilFolder, tartilList[tartilIndex]) * 1000;
-          tartilSedangDiputar = true;
-        }
-      } else if (cfg.aktifAdzan) {
-        dfplayer.play(cfg.fileAdzan);
-        adzanMulaiMillis = millis();
-        adzanDurasi = getDurasiAdzan(cfg.fileAdzan) * 1000;
-        adzanSedangDiputar = true;
+        Serial.println("Memutar adzan setelah tartil.");
       } else {
-        digitalWrite(RELAY_PIN, LOW); // Tidak ada audio, matikan relay
+        Serial.println("Tartil selesai, relay akan dimatikan.");
       }
-      lastTriggerMillis = millis();
-      sudahEksekusi = true;
     }
   }
 }
 
-void cekSelesaiTartil() {
-  if (!tartilSedangDiputar) return;
-  if (millis() - tartilMulaiMillis >= tartilDurasi) {
-    tartilIndex++;
-    if (tartilIndex < tartilCount) {
-      dfplayer.playFolder(tartilFolder, tartilList[tartilIndex]);
-      tartilMulaiMillis = millis();
-      tartilDurasi = getDurasiTartil(tartilFolder, tartilList[tartilIndex]) * 1000;
-    } else {
-      tartilSedangDiputar = false;
-      if (currentCfg && currentCfg->aktifAdzan) {
-        dfplayer.play(currentCfg->fileAdzan);
-        adzanMulaiMillis = millis();
-        adzanDurasi = getDurasiAdzan(currentCfg->fileAdzan) * 1000;
-        adzanSedangDiputar = true;
-      } else {
-        digitalWrite(RELAY_PIN, LOW); // Tidak ada adzan, matikan relay
-      }
-    }
-  }
-}*/
+
+
 
 void cekRelayOffDelay() {
-  if (relayMenungguMati && millis() - relayOffDelayMillis >= 3000) {
+  if (relayMenungguMati && millis() - relayOffDelayMillis >= 5000) {
     digitalWrite(RELAY_PIN, LOW);
+    Serial.println("cekRelayOffDelay");
     relayMenungguMati = false;
     manualSedangDiputar = false;
   }
 }
 void cekSelesaiAdzan() {
   if (!adzanSedangDiputar) return;
+  //Serial.println("selesai adzan aktif");
   if (millis() - adzanMulaiMillis >= adzanDurasi) {
     adzanSedangDiputar = false;
     digitalWrite(RELAY_PIN, LOW); // Matikan relay setelah adzan selesai
+    Serial.println("selesai adzan aktif");
   }
 }
 
