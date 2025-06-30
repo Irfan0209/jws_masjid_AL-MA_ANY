@@ -17,6 +17,15 @@ SoftwareSerial dfSerial(2, 3); // RX, TX ke DFPlayer
 DFRobotDFPlayerMini dfplayer;
 
 #define RELAY_PIN 13
+#define RUN_LED   12
+#define NORMAL_LED 11
+#define SETTING_LED 10
+#define NORMAL_STATUS_LED 9
+
+#define NORMAL_BUTTON 8
+#define SETTING_BUTTON 7
+#define RESET_BUTTON  6
+
 #define HARI_TOTAL 8 // 7 hari + SemuaHari (index ke-7)
 #define WAKTU_TOTAL 5
 #define MAX_FILE 11
@@ -63,14 +72,21 @@ bool relayMenungguMati = false;
 bool manualSedangDiputar = false;
 
 void setup() {
+  pinMode(RUN_LED, OUTPUT);
+  pinMode(NORMAL_LED, OUTPUT);
+  pinMode(SETTING_LED, OUTPUT);
+  pinMode(NORMAL_STATUS_LED, OUTPUT);
+  pinMode(RESET_BUTTON, OUTPUT);
+  pinMode(NORMAL_BUTTON, OUTPUT);
+  pinMode(SETTING_BUTTON, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW); // Awal mati
 
   Serial.begin(9600);
   dfSerial.begin(9600);
  // loadFromEEPROM();
-  durasiTartil[0][0] = 0; // Folder 1, File 1 = 10 detik
-  durasiTartil[0][1] = 20;
+  durasiTartil[0][0] = 0; 
+  durasiTartil[0][1] = 20;// Folder 1, File 1 = 20 detik
   durasiTartil[0][2] = 40;
   durasiTartil[0][3] = 100;
   durasiAdzan[1]     = 16;
@@ -204,9 +220,11 @@ void cekSelesaiManual() {
   if (manualSedangDiputar) {
     if (millis() - tartilMulaiMillis >= tartilDurasi) {
       manualSedangDiputar = false;
+      dfplayer.stop();
       relayOffDelayMillis = millis();
       relayMenungguMati = true;
       Serial.println("Manual selesai, relay akan dimatikan setelah delay.");
+      Serial.println("Manual selesai, DFPlayer dan relay akan dimatikan setelah delay.");
     }
   }
 }
