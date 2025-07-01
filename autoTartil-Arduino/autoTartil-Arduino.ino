@@ -12,19 +12,25 @@
 #include <DFRobotDFPlayerMini.h>
 #include <EEPROM.h>
 #include <TimeLib.h>
+#include "OneButton.h"
 
 SoftwareSerial dfSerial(2, 3); // RX, TX ke DFPlayer
 DFRobotDFPlayerMini dfplayer;
 
 #define RELAY_PIN 13
-#define RUN_LED   12
+#define RUN_LED   9
 #define NORMAL_LED 11
 #define SETTING_LED 10
-#define NORMAL_STATUS_LED 9
+#define NORMAL_STATUS_LED 12
 
 #define NORMAL_BUTTON 8
 #define SETTING_BUTTON 7
 #define RESET_BUTTON  6
+
+
+OneButton button1(NORMAL_BUTTON, true);
+OneButton button1(SETTING_BUTTON, true);
+OneButton button1(RESET_BUTTON, true);
 
 #define HARI_TOTAL 8 // 7 hari + SemuaHari (index ke-7)
 #define WAKTU_TOTAL 5
@@ -89,9 +95,9 @@ void setup() {
   pinMode(NORMAL_LED, OUTPUT);
   pinMode(SETTING_LED, OUTPUT);
   pinMode(NORMAL_STATUS_LED, OUTPUT);
-  pinMode(RESET_BUTTON, OUTPUT);
-  pinMode(NORMAL_BUTTON, OUTPUT);
-  pinMode(SETTING_BUTTON, OUTPUT);
+  pinMode(RESET_BUTTON, INPUT_PULLUP);
+  pinMode(NORMAL_BUTTON, INPUT_PULLUP);
+  pinMode(SETTING_BUTTON, INPUT_PULLUP);
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW); // Awal mati
 
@@ -124,6 +130,7 @@ void loop() {
   cekSelesaiManual();
   cekStatusWaktu(); // Tambahan
   cekStatusMode();
+  getStatusRun();
 }
 
 void bacaDataSerial() {
@@ -139,11 +146,15 @@ void bacaDataSerial() {
   }
 }
 
+void cekButton(){
+  
+}
+
 void cekStatusWaktu() {
   if (millis() - lastTimeReceived > TIMEOUT_INTERVAL) {
-     digitalWrite(NORMAL_LED, LOW);
+     digitalWrite(NORMAL_STATUS_LED, LOW);
   } else {
-    digitalWrite(NORMAL_LED, HIGH);
+    digitalWrite(NORMAL_STATUS_LED, HIGH);
     //digitalWrite(LED_MERAH, LOW);
   }
 }
