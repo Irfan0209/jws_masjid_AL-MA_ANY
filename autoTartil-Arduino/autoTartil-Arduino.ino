@@ -71,6 +71,19 @@ unsigned long relayOffDelayMillis = 0;
 bool relayMenungguMati = false;
 bool manualSedangDiputar = false;
 
+//variabel untuk led staus run
+#define BOARD_LED_BRIGHTNESS 255  // Kecerahan maksimum 244 dari 255
+#define DIMM(x) ((uint32_t)(x) * (BOARD_LED_BRIGHTNESS) / 255)
+uint8_t m_Counter = 0;   // Penghitung 8-bit untuk efek breathe
+
+//variabel mode 
+bool STATUS_MODE = false;
+
+//variabel untuk mengecek status normal
+unsigned long lastTimeReceived = 0;
+const unsigned long TIMEOUT_INTERVAL = 70000; // 70 detik, lebih dari 1 menit
+
+
 void setup() {
   pinMode(RUN_LED, OUTPUT);
   pinMode(NORMAL_LED, OUTPUT);
@@ -109,7 +122,8 @@ void loop() {
   cekSelesaiAdzan();
   cekRelayOffDelay();
   cekSelesaiManual();
-
+  cekStatusWaktu(); // Tambahan
+  cekStatusMode();
 }
 
 void bacaDataSerial() {
@@ -125,8 +139,27 @@ void bacaDataSerial() {
   }
 }
 
+void cekStatusWaktu() {
+  if (millis() - lastTimeReceived > TIMEOUT_INTERVAL) {
+     digitalWrite(NORMAL_LED, LOW);
+  } else {
+    digitalWrite(NORMAL_LED, HIGH);
+    //digitalWrite(LED_MERAH, LOW);
+  }
+}
+
+void cekStatusMode() {
+  if(STATUS_MODE == true){
+    digitalWrite(SETTING_LED,HIGH);
+    digitalWrite(NORMAL_LED,LOW);
+  }else{
+    digitalWrite(SETTING_LED,LOW);
+    digitalWrite(NORMAL_LED,HIGH);
+  }
+}
+
 void parseData(String data) {
-  if (data.startsWith("TIME:")) {
+  /*if (data.startsWith("TIME:")) {
     int idx = 5;
     uint8_t jam = getIntPart(data, idx);
     uint8_t menit = getIntPart(data, idx);
@@ -136,7 +169,20 @@ void parseData(String data) {
       currentDay = hari;
     }
     return;
+  }*/
+  if (data.startsWith("TIME:")) {
+  int idx = 5;
+  uint8_t jam = getIntPart(data, idx);
+  uint8_t menit = getIntPart(data, idx);
+  uint8_t hari = getIntPart(data, idx);
+  if (jam < 24 && menit < 60 && hari < 7) {
+    setTime(jam, menit, 0, 1, 1, 2024);
+    currentDay = hari;
+    lastTimeReceived = millis(); // Tambahkan baris ini
   }
+  return;
+}
+
   if (data.startsWith("VOL:")) {
     volumeDFPlayer = data.substring(4).toInt();
     dfplayer.volume(volumeDFPlayer);
@@ -343,6 +389,34 @@ void cekSelesaiAdzan() {
     digitalWrite(RELAY_PIN, LOW); // Matikan relay setelah adzan selesai
     Serial.println("selesai adzan aktif");
   }
+}
+
+void getStatusRun(){
+  unsigned long currentMillis = millis();
+    static unsigned long previousMillis;
+    static unsigned long interval=5000;
+    // Mengatur LED dengan waveLED jika interval waktu telah tercapai
+    if (currentMillis - previousMillis >= interval / 256) {  // Menggunakan interval/256 sesuai logika waveLED
+      previousMillis = currentMillis;  // Perbarui waktu sebelumnya
+      interval = waveLED(0, interval);  // Panggil fungsi waveLED dan dapatkan interval berikutnya
+      //Serial.println("interval:"+String(interval));
+    }
+}
+
+uint32_t waveLED(uint32_t, unsigned breathePeriod) {
+    uint32_t brightness = (m_Counter < 128) ? m_Counter : 255 - m_Counter;
+
+    setLED(DIMM(brightness * 2));  // Mengatur LED dengan kecerahan yang dihitung
+
+    // Menggulung nilai m_Counter antara 0 hingga 255
+    m_Counter = (m_Counter + 1) % 256;
+    
+    // Mengembalikan nilai interval (delay) untuk satu iterasi
+    return breathePeriod;
+}
+
+void setLED(uint8_t brightness) {
+  analogWrite(RUN_LED, brightness);
 }
 
 void loadFromEEPROM() {
