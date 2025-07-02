@@ -37,7 +37,7 @@ OneButton butt_restart(RESTART_BUTTON, true);
 #define HARI_TOTAL 8 // 7 hari + SemuaHari (index ke-7)
 #define WAKTU_TOTAL 5
 #define MAX_FILE 10
-#define MAX_FOLDER 5
+#define MAX_FOLDER 2
 
 struct WaktuConfig {
   byte aktif;
@@ -54,8 +54,8 @@ uint8_t durasiAdzan[MAX_FILE];
 uint8_t durasiTartil[MAX_FOLDER][MAX_FILE];
 byte volumeDFPlayer = 20;
 
-uint8_t jamSholat[WAKTU_TOTAL] = {4, 12, 15, 18, 19};
-uint8_t menitSholat[WAKTU_TOTAL] = {30, 0, 30, 0, 30};
+uint8_t jamSholat[WAKTU_TOTAL] = {4, 12, 15, 18, 19 };
+uint8_t menitSholat[WAKTU_TOTAL] = {30, 0, 30, 0, 30 };
 
 bool tartilSedangDiputar = false;
 uint32_t tartilMulaiMillis = 0;
@@ -305,6 +305,23 @@ if (data.startsWith("ADZAN:")) {
   return;
 }
 
+if (data.startsWith("JWS:")) {
+  int idx = 4;
+  for (int i = 0; i < WAKTU_TOTAL; i++) {
+    jamSholat[i] = getIntPart(data, idx);
+    menitSholat[i] = getIntPart(data, idx);
+  }
+  saveToEEPROM();  // jika ingin disimpan
+  Serial.println("Jadwal Sholat diperbarui:");
+  for (int i = 0; i < WAKTU_TOTAL; i++) {
+    Serial.print(" - Waktu "); Serial.print(i);
+    Serial.print(": "); Serial.print(jamSholat[i]);
+    Serial.print(":"); Serial.println(menitSholat[i]);
+  }
+  return;
+}
+
+
 }
 
 //
@@ -410,11 +427,21 @@ void cekSelesaiTartil() {
         adzanSedangDiputar = true;
         dfplayer.playFolder(11, currentCfg->fileAdzan);
       } else {
+        matikanSemuaAudio();
         // Tidak ada adzan, artinya bisa matikan relay atau lanjut ke idle
         // (aksi selanjutnya bisa kamu tambahkan sendiri jika perlu)
       }
     }
   }
+}
+
+void matikanSemuaAudio() {
+  dfplayer.stop();
+  digitalWrite(RELAY_PIN, LOW);
+  relayMenungguMati = false;
+  tartilSedangDiputar = false;
+  adzanSedangDiputar = false;
+  manualSedangDiputar = false;
 }
 
 
@@ -493,6 +520,11 @@ void saveToEEPROM() {
   EEPROM.write(addr, volumeDFPlayer);
   addr += sizeof(volumeDFPlayer);
 
+  for (int i = 0; i < WAKTU_TOTAL; i++) {
+  EEPROM.write(addr, jamSholat[i]); addr += sizeof(uint8_t);
+  EEPROM.write(addr, menitSholat[i]); addr += sizeof(uint8_t);
+}
+
  EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC); // Simpan magic number
 
 }
@@ -539,4 +571,14 @@ void loadFromEEPROM() {
   }
   EEPROM.get(addr, volumeDFPlayer);
   Serial.print("Volume: "); Serial.println(volumeDFPlayer);
+
+  for (int i = 0; i < WAKTU_TOTAL; i++) {
+  EEPROM.get(addr, jamSholat[i]); addr += sizeof(uint8_t);
+  EEPROM.get(addr, menitSholat[i]); addr += sizeof(uint8_t);
+  Serial.print("jamSholat["); Serial.print(i);
+  Serial.print("] = "); Serial.println(jamSholat[i]);
+  Serial.print("menitSholat["); Serial.print(i);
+  Serial.print("] = "); Serial.println(menitSholat[i]);
+}
+
 }
