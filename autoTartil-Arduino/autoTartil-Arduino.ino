@@ -27,6 +27,8 @@ DFRobotDFPlayerMini dfplayer;
 #define SETTING_BUTTON 7
 #define RESTART_BUTTON  6
 
+#define EEPROM_MAGIC 0x42 // Tanda bahwa EEPROM sudah pernah diinisialisasi
+#define EEPROM_ADDR_MAGIC 1000  // Alamat terakhir (disesuaikan agar tidak tabrakan)
 
 OneButton butt_normal(NORMAL_BUTTON, true);
 OneButton butt_setting(SETTING_BUTTON, true);
@@ -105,14 +107,13 @@ void setup() {
   
   Serial.begin(9600);
   dfSerial.begin(9600);
-  delay(2000);
-  //loadFromEEPROM();
-  delay(3000);
-//  durasiTartil[0][0] = 0; 
-//  durasiTartil[0][1] = 20;// Folder 1, File 1 = 20 detik
-//  durasiTartil[0][2] = 40;
-//  durasiTartil[0][3] = 100;
-//  durasiAdzan[1]     = 16;
+ // delay(2000);
+  
+  durasiTartil[0][0] = 0; 
+  durasiTartil[0][1] = 20;// Folder 1, File 1 = 20 detik
+  durasiTartil[0][2] = 40;
+  durasiTartil[0][3] = 100;
+  durasiAdzan[1]     = 16;
 
   if (!dfplayer.begin(dfSerial)) {
     Serial.println("DFPlayer tidak terdeteksi!");
@@ -120,6 +121,8 @@ void setup() {
   }
   dfplayer.volume(volumeDFPlayer);
   Serial.println("Sistem Auto Tartil Siap.");
+  loadFromEEPROM();
+  delay(2000);
 }
 
 void loop() {
@@ -133,18 +136,20 @@ void loop() {
   cekRelayOffDelay();
   cekSelesaiManual();
   cekStatusWaktu(); // Tambahan
-  cekStatusMode();
-  getStatusRun();
-  butt_normal.tick();
-  butt_setting.tick();
-  butt_restart.tick();
+//  cekStatusMode();
+//  getStatusRun();
+//  butt_normal.tick();
+//  butt_setting.tick();
+//  butt_restart.tick();
 }
 
 void bacaDataSerial() {
   static String buffer = "";
   while (Serial.available()) {
     char c = Serial.read();
+    Serial.print(c); // DEBUG: tampilkan semua karakter yang diterima
     if (c == '\n') {
+      Serial.println("\n>> Memanggil parseData()");
       parseData(buffer);
       buffer = "";
     } else {
@@ -186,6 +191,7 @@ void parseData(String data) {
     }
     return;
   }*/
+  Serial.println("DATA: " + String(data));
   if (data.startsWith("TIME:")) {
   int idx = 5;
   uint8_t jam = getIntPart(data, idx);
@@ -204,10 +210,58 @@ void parseData(String data) {
     volumeDFPlayer = data.substring(4).toInt();
     dfplayer.volume(volumeDFPlayer);
     saveToEEPROM();
+    //Serial.println("VOL");
     return;
   }
+ if (data.startsWith("HR:")) {
+    int idxHR = data.indexOf("HR:");
+    //Serial.println("idxHR"+String(idxHR));
+    if (idxHR == -1) return;
 
-  if (data.startsWith("HR:")) {
+    int hari = data.substring(idxHR + 3, data.indexOf('|')).toInt();
+
+    // Versi fleksibel untuk |W0: dan |W:
+    for (int w = 0; w < WAKTU_TOTAL; w++) {
+      String tag1 = "|W" + String(w) + ":";
+      String tag2 = "|W:";
+      int idxW = data.indexOf(tag1);
+      int waktuIdx = w;
+      if (idxW == -1) {
+        idxW = data.indexOf(tag2);
+        if (idxW != -1) {
+          int temp = idxW + tag2.length();
+          waktuIdx = getIntPart(data, temp);
+          idxW = data.indexOf(tag2);
+        }
+      }
+      if (idxW == -1) continue;
+
+      int koma = idxW + ((data.indexOf(tag1) != -1) ? tag1.length() : tag2.length());
+
+      WaktuConfig &cfg = jadwal[hari][waktuIdx];
+      cfg.aktif       = getIntPart(data, koma);
+      cfg.aktifAdzan  = getIntPart(data, koma);
+      cfg.fileAdzan   = getIntPart(data, koma);
+      cfg.tartilDulu  = getIntPart(data, koma);
+      cfg.durasiTartil= getIntPart(data, koma);
+      cfg.folder      = getIntPart(data, koma);
+
+      String listStr = data.substring(koma);
+      for (int i = 0; i < 3; i++) {
+        int dash = listStr.indexOf('-');
+        if (dash == -1) {
+          cfg.list[i] = listStr.length() > 0 ? listStr.toInt() : 0;
+          listStr = "";
+        } else {
+          cfg.list[i] = listStr.substring(0, dash).toInt();
+          listStr = listStr.substring(dash + 1);
+        }
+      }
+    }
+    saveToEEPROM();
+    return;
+  }
+  /*if (data.startsWith("HR:")) {
     int idxHR = data.indexOf("HR:");
     Serial.println("Data HR diterima: " + idxHR); // Tambahan
     if (idxHR == -1) return;
@@ -241,7 +295,7 @@ void parseData(String data) {
     }
     saveToEEPROM();
     return;
-  }
+  }*/
 /*
   if (data.startsWith("VOL:")) {
     volumeDFPlayer = data.substring(4).toInt();
@@ -514,6 +568,7 @@ void saveToEEPROM() {
   EEPROM.put(addr, volumeDFPlayer); addr += sizeof(volumeDFPlayer);
 }
 */
+/*
 // Tambahan fungsi untuk menyimpan dan membaca konfigurasi dari EEPROM
 void saveToEEPROM() {
   Serial.println("Data berhasil disimpan ke EEPROM!");
@@ -588,4 +643,76 @@ void loadFromEEPROM() {
   Serial.println(volumeDFPlayer);
 
   Serial.println("Selesai memuat konfigurasi dari EEPROM.");
+}*/
+
+
+void saveToEEPROM() {
+  Serial.println("Data berhasil disimpan ke EEPROM!");
+  int addr = 0;
+  for (int h = 0; h < HARI_TOTAL; h++) {
+    for (int w = 0; w < WAKTU_TOTAL; w++) {
+      EEPROM.put(addr, jadwal[h][w]);
+      addr += sizeof(WaktuConfig);
+    }
+  }
+  for (int i = 0; i < MAX_FILE; i++) {
+    EEPROM.write(addr, durasiAdzan[i]);
+    addr += sizeof(uint16_t);
+  }
+  for (int f = 0; f < MAX_FOLDER; f++) {
+    for (int i = 0; i < MAX_FILE; i++) {
+      EEPROM.write(addr, durasiTartil[f][i]);
+      addr += sizeof(uint16_t);
+    }
+  }
+  EEPROM.write(addr, volumeDFPlayer);
+  addr += sizeof(volumeDFPlayer);
+
+ EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC); // Simpan magic number
+
+//#if defined(ESP8266) || defined(ESP32)
+//  EEPROM.commit();
+//#endif
+}
+
+void loadFromEEPROM() {
+//  if (EEPROM.read(EEPROM_ADDR_MAGIC) != EEPROM_MAGIC) {
+//    Serial.println("EEPROM belum diinisialisasi. Lewati load.");
+//    return;
+//  }
+
+  Serial.println("Memuat konfigurasi dari EEPROM...");
+  int addr = 0;
+  for (int h = 0; h < HARI_TOTAL; h++) {
+    for (int w = 0; w < WAKTU_TOTAL; w++) {
+      EEPROM.get(addr, jadwal[h][w]);
+      addr += sizeof(WaktuConfig);
+      Serial.print("HR:"); Serial.print(h);
+      Serial.print(" W"); Serial.print(w);
+      Serial.print(" Aktif:"); Serial.print(jadwal[h][w].aktif);
+      Serial.print(" Adzan:"); Serial.print(jadwal[h][w].aktifAdzan);
+      Serial.print(" FileAdzan:"); Serial.print(jadwal[h][w].fileAdzan);
+      Serial.print(" TartilDulu:"); Serial.print(jadwal[h][w].tartilDulu);
+      Serial.print(" DurasiTartil:"); Serial.print(jadwal[h][w].durasiTartil);
+      Serial.print(" Folder:"); Serial.print(jadwal[h][w].folder);
+      Serial.print(" List:");
+      Serial.print(jadwal[h][w].list[0]); Serial.print("-");
+      Serial.print(jadwal[h][w].list[1]); Serial.print("-");
+      Serial.println(jadwal[h][w].list[2]);
+    }
+  }
+  for (int i = 0; i < MAX_FILE; i++) {
+    EEPROM.get(addr, durasiAdzan[i]);
+    addr += sizeof(uint16_t);
+  }
+  for (int f = 0; f < MAX_FOLDER; f++) {
+    for (int i = 0; i < MAX_FILE; i++) {
+      EEPROM.get(addr, durasiTartil[f][i]);
+      addr += sizeof(uint16_t);
+      Serial.print("Tartil["); Serial.print(f); Serial.print("]["); Serial.print(i);
+      Serial.print("] = "); Serial.println(durasiTartil[f][i]);
+    }
+  }
+  EEPROM.get(addr, volumeDFPlayer);
+  Serial.print("Volume: "); Serial.println(volumeDFPlayer);
 }
