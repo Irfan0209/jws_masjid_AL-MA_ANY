@@ -80,8 +80,8 @@ bool relayMenungguMati = false;
 bool manualSedangDiputar = false;
 
 //variabel untuk led staus run
-#define BOARD_LED_BRIGHTNESS 255  // Kecerahan maksimum 244 dari 255
-#define DIMM(x) ((uint32_t)(x) * (BOARD_LED_BRIGHTNESS) / 255)
+//#define BOARD_LED_BRIGHTNESS 255  // Kecerahan maksimum 244 dari 255
+//#define DIMM(x) ((uint32_t)(x) * (BOARD_LED_BRIGHTNESS) / 255)
 //uint8_t m_Counter = 0;   // Penghitung 8-bit untuk efek breathe
 // Variabel global yang dibutuhkan
 static uint8_t m_Counter = 0;
@@ -126,11 +126,11 @@ void setup() {
   Serial.println("Sistem Auto Tartil Siap.");
   loadFromEEPROM();
   delay(2000);
-  durasiTartil[0][0] = 0; 
-  durasiTartil[0][1] = 20;// Folder 1, File 1 = 20 detik
-  durasiTartil[0][2] = 40;
-  durasiTartil[0][3] = 100;
-  durasiAdzan[1]     = 16;
+//  durasiTartil[0][0] = 0; 
+//  durasiTartil[0][1] = 20;// Folder 1, File 1 = 20 detik
+//  durasiTartil[0][2] = 40;
+//  durasiTartil[0][3] = 100;
+//  durasiAdzan[1]     = 16;
 }
 
 void loop() {
@@ -722,6 +722,7 @@ void cekSelesaiAdzan() {
   if (!adzanSedangDiputar) return;
   //Serial.println("selesai adzan aktif");
   if (millis() - adzanMulaiMillis >= adzanDurasi) {
+    dfplayer.stop();
     adzanSedangDiputar = false;
     digitalWrite(RELAY_PIN, LOW); // Matikan relay setelah adzan selesai
     Serial.println("selesai adzan aktif");
