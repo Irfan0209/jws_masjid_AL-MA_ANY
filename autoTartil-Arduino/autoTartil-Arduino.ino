@@ -80,7 +80,7 @@ uint32_t tartilMulaiMillis = 0;
 uint16_t tartilDurasi = 0;
 byte tartilFolder = 0;
 byte tartilIndex = 0;
-byte tartilList[3];
+static byte tartilList[3];
 byte tartilCount = 0;
 WaktuConfig *currentCfg = nullptr;
 
@@ -210,6 +210,7 @@ void parseData(String data) {
     return;
   }
 
+//---- Program baru------//
   // --- Parsing HR (jadwal harian) ---
 if (data.startsWith("HR:")) {
   int hariEnd = data.indexOf('|');
@@ -232,23 +233,31 @@ if (data.startsWith("HR:")) {
     cfg.tartilDulu   = getIntPart(data, pos);
     cfg.folder       = getIntPart(data, pos);
 
-    // Parsing 3 file list tartil (dipisah '-')
-    for (int i = 0; i < 3; i++) {
-      int dash = data.indexOf('-', pos);
-      if (dash == -1) {
-        cfg.list[i] = data.substring(pos).toInt();
-        break;
-      }
-      cfg.list[i] = data.substring(pos, dash).toInt();
-      pos = dash + 1;
-    }
+    // Lebih aman dan memastikan semua list[i] terisi
+for (int i = 0; i < 3; i++) {
+  int dash = data.indexOf('-', pos);
+  if (dash != -1) {
+    cfg.list[i] = data.substring(pos, dash).toInt();
+    pos = dash + 1;
+  } else {
+    cfg.list[i] = data.substring(pos).toInt(); // pastikan tetap terisi jika dash tidak ada
+    break;
+  }
+}
+
+ for (int i = 0; i < 3; i++) {
+  Serial.print("list["); Serial.print(i); Serial.print("] = ");
+  Serial.println(cfg.list[i]);
+}
+
   }
 
   saveToEEPROM();
   return;
 }
+//----------------------------//
 
-/*
+/*//------Program lama--------//
   // --- Parsing HR (jadwal harian) ---
   if (data.startsWith("HR:")) {
     int hariEnd = data.indexOf('|');
@@ -287,7 +296,7 @@ if (data.startsWith("HR:")) {
     saveToEEPROM();
     return;
   }
-*/
+//-----------------------//*/
   // --- Perintah PLAY ---
   if (data.startsWith("PLAY:")) {
     int idx = 5;
@@ -428,6 +437,7 @@ uint16_t getDurasiAdzan(byte file) {
   return durasiAdzan[file];
 }
 
+//---- Program Baru------//
 void cekDanPutarSholatNonBlocking() {
   if (tartilSedangDiputar || adzanSedangDiputar) return;
 
@@ -435,46 +445,47 @@ void cekDanPutarSholatNonBlocking() {
 
   for (byte w = 0; w < WAKTU_TOTAL; w++) {
     WaktuConfig &cfg = jadwal[currentDay][w];
-    if (!cfg.aktif) continue;
+    if (!cfg.aktif || sudahEksekusi) continue;
 
-    tartilCount = 0;
     uint16_t totalDurasi = 0;
+    byte jumlahTartil = 0;
 
+    // Hitung total durasi tartil langsung dari cfg.list
     for (byte i = 0; i < 3; i++) {
       byte f = cfg.list[i];
       if (f) {
         uint16_t d = getDurasiTartil(cfg.folder, f);
-        if (d) {
-          tartilList[tartilCount++] = f;
+        if (d > 0) {
           totalDurasi += d;
+          jumlahTartil++;
         }
       }
     }
 
     uint32_t jadwalDetik = (uint32_t)jamSholat[w] * 3600UL + (uint32_t)menitSholat[w] * 60UL;
-    uint32_t startTartil = jadwalDetik - totalDurasi;
-
-    // Jika waktu sekarang sudah melewati waktu tartil, dan belum pernah dieksekusi
-    if (now >= startTartil && now < jadwalDetik && !sudahEksekusi) {
+    if (now == jadwalDetik - totalDurasi) {
       digitalWrite(RELAY_PIN, HIGH);
+      currentCfg = &cfg;
 
-      if (cfg.tartilDulu && tartilCount > 0) {
+      if (cfg.tartilDulu && jumlahTartil > 0) {
         tartilIndex = 0;
         tartilFolder = cfg.folder;
-        currentCfg = &cfg;
+        tartilSedangDiputar = true;
 
-        byte f = tartilList[0];
+        byte f = cfg.list[tartilIndex];
         tartilDurasi = getDurasiTartil(tartilFolder, f) * 1000UL;
         tartilMulaiMillis = millis();
-        tartilSedangDiputar = true;
         dfplayer.playFolder(tartilFolder, f);
-        Serial.println("Tartil dimulai.");
+
+        Serial.println(F("Tartil dimulai."));
+        Serial.print(F("Folder: ")); Serial.print(tartilFolder);
+        Serial.print(F(" File: ")); Serial.println(f);
       } else if (cfg.aktifAdzan) {
         adzanDurasi = getDurasiAdzan(cfg.fileAdzan) * 1000UL;
         adzanMulaiMillis = millis();
         adzanSedangDiputar = true;
         dfplayer.playFolder(11, cfg.fileAdzan);
-        Serial.println("Adzan dimulai langsung tanpa tartil.");
+        Serial.println(F("Memutar adzan (tanpa tartil)."));
       }
 
       lastTriggerMillis = millis();
@@ -483,7 +494,86 @@ void cekDanPutarSholatNonBlocking() {
   }
 }
 
-/*
+void cekSelesaiTartil() {
+  if (!tartilSedangDiputar || !currentCfg) return;
+
+  if (millis() - tartilMulaiMillis >= tartilDurasi) {
+    tartilIndex++;
+    while (tartilIndex < 3) {
+      byte nextFile = currentCfg->list[tartilIndex];
+      if (nextFile > 0) {
+        uint16_t durasi = getDurasiTartil(tartilFolder, nextFile);
+        if (durasi > 0) {
+          dfplayer.playFolder(tartilFolder, nextFile);
+          tartilDurasi = durasi * 1000UL;
+          tartilMulaiMillis = millis();
+          Serial.print("Memutar tartil ke-");
+          Serial.print(tartilIndex + 1);
+          Serial.print(": folder "); Serial.print(tartilFolder);
+          Serial.print(", file "); Serial.print(nextFile);
+          Serial.print(", durasi "); Serial.println(durasi);
+          return;
+        }
+      }
+      tartilIndex++;
+    }
+
+    // Semua list selesai
+    tartilSedangDiputar = false;
+
+    if (currentCfg->aktifAdzan) {
+      dfplayer.playFolder(11, currentCfg->fileAdzan);
+      adzanDurasi = getDurasiAdzan(currentCfg->fileAdzan) * 1000UL;
+      adzanMulaiMillis = millis();
+      adzanSedangDiputar = true;
+      Serial.println("Tartil selesai, memutar adzan.");
+    } else {
+      Serial.println("Tartil selesai, tidak ada adzan. Relay akan dimatikan.");
+    }
+  }
+}
+
+//void cekSelesaiTartil() {
+//  if (!tartilSedangDiputar || !currentCfg) return;
+//
+//  if (millis() - tartilMulaiMillis >= tartilDurasi) {
+//    tartilIndex++;
+//    while (tartilIndex < 3) {
+//      byte fileToPlay = currentCfg->list[tartilIndex];
+//      if (fileToPlay > 0) {
+//        uint16_t durasi = getDurasiTartil(tartilFolder, fileToPlay);
+//        if (durasi > 0) {
+//          dfplayer.playFolder(tartilFolder, fileToPlay);
+//          tartilMulaiMillis = millis();
+//          tartilDurasi = durasi * 1000UL;
+//          Serial.print("Memutar tartil ke-"); Serial.print(tartilIndex + 1);
+//          Serial.print(": folder "); Serial.print(tartilFolder);
+//          Serial.print(", file "); Serial.print(fileToPlay);
+//          Serial.print(", durasi "); Serial.println(durasi);
+//          return;
+//        }
+//      }
+//      tartilIndex++;  // Lanjut ke file berikutnya jika kosong/invalid
+//    }
+//
+//    // Jika semua selesai:
+//    tartilSedangDiputar = false;
+//    if (currentCfg->aktifAdzan) {
+//      dfplayer.playFolder(11, currentCfg->fileAdzan);
+//      adzanMulaiMillis = millis();
+//      adzanDurasi = getDurasiAdzan(currentCfg->fileAdzan) * 1000UL;
+//      adzanSedangDiputar = true;
+//      Serial.println("Tartil selesai, memutar adzan.");
+//    } else {
+//      Serial.println("Tartil selesai, tidak ada adzan.");
+//    }
+//  }
+//}
+
+//----------------------//
+
+/*//---- Program Lama------//
+
 void cekDanPutarSholatNonBlocking() {
   if (tartilSedangDiputar || adzanSedangDiputar) return;
 
@@ -497,7 +587,7 @@ void cekDanPutarSholatNonBlocking() {
     uint16_t totalDurasi = 0;
 
     for (byte i = 0; i < 3; i++) {
-      byte f = cfg.list[i];
+       byte f = cfg.list[i];
       if (f) {
         uint16_t d = getDurasiTartil(cfg.folder, f);
         if (d) {
@@ -521,6 +611,15 @@ void cekDanPutarSholatNonBlocking() {
         tartilMulaiMillis = millis();
         tartilSedangDiputar = true;
         dfplayer.playFolder(tartilFolder, f);
+        //------------//
+        Serial.print(F("tartil index: ")); Serial.println(tartilFolder);
+        Serial.print(F("f           : ")); Serial.println(f);
+        Serial.print(F("tartilDurasi: ")); Serial.println(tartilDurasi);
+        for (int i = 0; i < 3; i++) {
+          Serial.print("tartilList["); Serial.print(i); Serial.print("] = ");
+          Serial.println(tartilList[i]);
+        }
+        //-------------------//
       } else if (cfg.aktifAdzan) {
         adzanDurasi = getDurasiAdzan(cfg.fileAdzan) * 1000UL;
         adzanMulaiMillis = millis();
@@ -533,11 +632,16 @@ void cekDanPutarSholatNonBlocking() {
     }
   }
 }
-*/
+
 
 void cekSelesaiTartil() {
   if (!tartilSedangDiputar) return;
-
+  //----------------------
+  for (int i = 0; i < 3; i++) {
+      Serial.print("tartilList2["); Serial.print(i); Serial.print("] = ");
+      Serial.println(tartilList[i]);
+  }
+  //------------------------
   if (millis() - tartilMulaiMillis >= tartilDurasi) {
     tartilIndex++;
 
@@ -546,6 +650,10 @@ void cekSelesaiTartil() {
       tartilDurasi = getDurasiTartil(tartilFolder, f) * 1000UL;
       tartilMulaiMillis = millis();
       dfplayer.playFolder(tartilFolder, f);
+      Serial.print(F("tartil index: ")); Serial.println(tartilIndex);
+      //Serial.print(F("tartilList[tartilIndex]: ")); Serial.println(tartilList[2]);
+      Serial.print(F("tartilCount : ")); Serial.println(tartilCount);
+      
     } else {
       tartilSedangDiputar = false;
 
@@ -554,6 +662,7 @@ void cekSelesaiTartil() {
         adzanMulaiMillis = millis();
         adzanSedangDiputar = true;
         dfplayer.playFolder(11, currentCfg->fileAdzan);
+        
       } else {
         matikanSemuaAudio();
         // Tidak ada adzan, artinya bisa matikan relay atau lanjut ke idle
@@ -562,6 +671,9 @@ void cekSelesaiTartil() {
     }
   }
 }
+
+
+*///-----------------------//
 
 void matikanSemuaAudio() {
   dfplayer.stop();
@@ -754,6 +866,8 @@ void saveToEEPROM() {
 #if defined(ESP8266) || defined(ESP32)
   EEPROM.commit(); // penting untuk board ESP
 #endif
+
+ 
 
   EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC);
 }
