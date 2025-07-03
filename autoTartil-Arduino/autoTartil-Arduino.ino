@@ -80,8 +80,6 @@ uint32_t tartilMulaiMillis = 0;
 uint16_t tartilDurasi = 0;
 byte tartilFolder = 0;
 byte tartilIndex = 0;
-// byte tartilList[3];
-//byte tartilCount = 0;
 WaktuConfig *currentCfg = nullptr;
 
 uint32_t lastTriggerMillis = 0;
@@ -472,8 +470,11 @@ void cekDanPutarSholatNonBlocking() {
       }
     }
 
-    uint32_t jadwalDetik = (uint32_t)jamSholat[w] * 3600UL + (uint32_t)menitSholat[w] * 60UL;
-    if (now == jadwalDetik - totalDurasi) {
+     uint32_t jadwalDetik = (uint32_t)jamSholat[w] * 3600UL + (uint32_t)menitSholat[w] * 60UL;
+     uint32_t triggerDetik = cfg.tartilDulu ? (jadwalDetik - totalDurasi) : jadwalDetik;
+
+     if (now == triggerDetik && !sudahEksekusi) {
+
       digitalWrite(RELAY_PIN, HIGH);
       currentCfg = &cfg;
 
@@ -538,6 +539,7 @@ void cekSelesaiTartil() {
       adzanSedangDiputar = true;
       Serial.println("Tartil selesai, memutar adzan.");
     } else {
+      matikanSemuaAudio();
       Serial.println("Tartil selesai, tidak ada adzan. Relay akan dimatikan.");
     }
   }
