@@ -36,8 +36,8 @@ OneButton butt_restart(RESTART_BUTTON, true);
 
 #define HARI_TOTAL 8 // 7 hari + SemuaHari (index ke-7)
 #define WAKTU_TOTAL 5
-#define MAX_FILE 10
-#define MAX_FOLDER 2
+#define MAX_FILE 25
+#define MAX_FOLDER 3
 
 struct WaktuConfig {
   byte aktif;
@@ -269,49 +269,62 @@ void parseData(String data) {
     return;
   }
 
-  if (data.startsWith("NAMAFILE:")) {
-  int idx = 9;
-  String nama = data.substring(idx, data.indexOf(':', idx));
-  idx = data.indexOf(':', idx) + 1;
-  byte folder = getIntPart(data, idx);
-  byte list = getIntPart(data, idx);
-  byte durasi = getIntPart(data, idx);
+//  if (data.startsWith("NAMAFILE:")) {
+//  int idx = 9;
+//  String nama = data.substring(idx, data.indexOf(':', idx));
+//  idx = data.indexOf(':', idx) + 1;
+//  byte folder = getIntPart(data, idx);
+//  byte list = getIntPart(data, idx);
+//  byte durasi = getIntPart(data, idx);
+//
+//  if (folder < MAX_FOLDER && list < MAX_FILE) {
+//    durasiTartil[folder][list] = durasi;
+//    Serial.print("Disimpan durasi tartil: ");
+//    Serial.print(nama); Serial.print(" => Folder ");
+//    Serial.print(folder); Serial.print(", List ");
+//    Serial.print(list); Serial.print(", Durasi ");
+//    Serial.print(durasi); Serial.println(" detik");
+//    saveToEEPROM();
+//  } else {
+//    Serial.println("Folder atau List melebihi batas.");
+//  }
+//  return;
+//}
 
-  if (folder < MAX_FOLDER && list < MAX_FILE) {
-    durasiTartil[folder][list] = durasi;
-    Serial.print("Disimpan durasi tartil: ");
-    Serial.print(nama); Serial.print(" => Folder ");
-    Serial.print(folder); Serial.print(", List ");
-    Serial.print(list); Serial.print(", Durasi ");
-    Serial.print(durasi); Serial.println(" detik");
-    saveToEEPROM();
-  } else {
-    Serial.println("Folder atau List melebihi batas.");
-  }
-  return;
-}
-
-if (data.startsWith("ADZAN:")) {
-  int idx = 6;
-  byte file = getIntPart(data, idx);
-  byte durasi = getIntPart(data, idx);
-  if (file < MAX_FILE) {
-    durasiAdzan[file] = durasi;
-    Serial.print("Disimpan durasi adzan file ");
-    Serial.print(file); Serial.print(" = ");
-    Serial.print(durasi); Serial.println(" detik");
-    saveToEEPROM();
-  }
-  return;
-}
+//if (data.startsWith("ADZAN:")) {
+//  int idx = 6;
+//  byte file = getIntPart(data, idx);
+//  byte durasi = getIntPart(data, idx);
+//  if (file < MAX_FILE) {
+//    durasiAdzan[file] = durasi;
+//    Serial.print("Disimpan durasi adzan file ");
+//    Serial.print(file); Serial.print(" = ");
+//    Serial.print(durasi); Serial.println(" detik");
+//    saveToEEPROM();
+//  }
+//  return;
+//}
 
 if (data.startsWith("JWS:")) {
-  int idx = 4;
+  String sisa = data.substring(4); // Hilangkan "JWS:"
   for (int i = 0; i < WAKTU_TOTAL; i++) {
-    jamSholat[i] = getIntPart(data, idx);
-    menitSholat[i] = getIntPart(data, idx);
+    int komaIdx = sisa.indexOf(',');
+    int pemisahIdx = sisa.indexOf('|');
+
+    if (komaIdx == -1) break;
+    jamSholat[i] = sisa.substring(0, komaIdx).toInt();
+
+    if (pemisahIdx == -1) {
+      // Tidak ada | berarti ini adalah elemen terakhir
+      menitSholat[i] = sisa.substring(komaIdx + 1).toInt();
+      break;
+    } else {
+      menitSholat[i] = sisa.substring(komaIdx + 1, pemisahIdx).toInt();
+      sisa = sisa.substring(pemisahIdx + 1); // lanjut ke data berikutnya
+    }
   }
-  saveToEEPROM();  // jika ingin disimpan
+
+  saveToEEPROM();
   Serial.println("Jadwal Sholat diperbarui:");
   for (int i = 0; i < WAKTU_TOTAL; i++) {
     Serial.print(" - Waktu "); Serial.print(i);
@@ -320,6 +333,7 @@ if (data.startsWith("JWS:")) {
   }
   return;
 }
+
 
 
 }
@@ -501,33 +515,42 @@ void RESTART(){
 void saveToEEPROM() {
   Serial.println("Data berhasil disimpan ke EEPROM!");
   int addr = 0;
+
   for (int h = 0; h < HARI_TOTAL; h++) {
     for (int w = 0; w < WAKTU_TOTAL; w++) {
       EEPROM.put(addr, jadwal[h][w]);
       addr += sizeof(WaktuConfig);
     }
   }
+
   for (int i = 0; i < MAX_FILE; i++) {
-    EEPROM.write(addr, durasiAdzan[i]);
+    EEPROM.put(addr, durasiAdzan[i]);
     addr += sizeof(uint16_t);
   }
+
   for (int f = 0; f < MAX_FOLDER; f++) {
     for (int i = 0; i < MAX_FILE; i++) {
-      EEPROM.write(addr, durasiTartil[f][i]);
+      EEPROM.put(addr, durasiTartil[f][i]);
       addr += sizeof(uint16_t);
     }
   }
-  EEPROM.write(addr, volumeDFPlayer);
-  addr += sizeof(volumeDFPlayer);
+
+ EEPROM.put(addr, volumeDFPlayer);
+ addr += sizeof(volumeDFPlayer);
+
 
   for (int i = 0; i < WAKTU_TOTAL; i++) {
-  EEPROM.write(addr, jamSholat[i]); addr += sizeof(uint8_t);
-  EEPROM.write(addr, menitSholat[i]); addr += sizeof(uint8_t);
+    EEPROM.write(addr++, jamSholat[i]);
+    EEPROM.write(addr++, menitSholat[i]);
+  }
+
+#if defined(ESP8266) || defined(ESP32)
+  EEPROM.commit(); // penting untuk board ESP
+#endif
+
+  EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC);
 }
 
- EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC); // Simpan magic number
-
-}
 
 void loadFromEEPROM() {
   if (EEPROM.read(EEPROM_ADDR_MAGIC) != EEPROM_MAGIC) {
@@ -570,6 +593,7 @@ void loadFromEEPROM() {
     }
   }
   EEPROM.get(addr, volumeDFPlayer);
+  addr += sizeof(volumeDFPlayer);
   Serial.print("Volume: "); Serial.println(volumeDFPlayer);
 
   for (int i = 0; i < WAKTU_TOTAL; i++) {
