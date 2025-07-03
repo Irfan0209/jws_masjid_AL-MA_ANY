@@ -1,8 +1,8 @@
-HR:0|W0:1,1,1,1,60,1,1-2-3
-
 HR:0|W0:1,1,1,1,1,1-2-3
 
-TIME:04,30,0
+
+
+TIME:4,27,0,0
 
 JWS:4,30|12,0|15,30|18,0|19,30
 
@@ -20,11 +20,14 @@ File Adzan: 3
 
 Tartil sebelum adzan: ya
 
-Durasi tartil: 60 detik (tidak dipakai kalau ambil dari durasiTartil)
-
 Folder: 1
 
 List rekaman: 1, 2, 3
 
+ Waktu 0: 4:30
+ - Waktu 1: 12:0
+ - Waktu 2: 15:30
+ - Waktu 3: 18:0
+ - Waktu 4: 19:30
 
                                                                                                                                                                                                                                                                                    
