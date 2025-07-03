@@ -80,8 +80,8 @@ uint32_t tartilMulaiMillis = 0;
 uint16_t tartilDurasi = 0;
 byte tartilFolder = 0;
 byte tartilIndex = 0;
-static byte tartilList[3];
-byte tartilCount = 0;
+// byte tartilList[3];
+//byte tartilCount = 0;
 WaktuConfig *currentCfg = nullptr;
 
 uint32_t lastTriggerMillis = 0;
@@ -188,19 +188,29 @@ void cekStatusSystem() {
 void parseData(String data) {
   Serial.println("DATA: " + data);
 
-  // --- Parsing TIME ---
-  if (data.startsWith("TIME:")) {
-    int idx = 5;
-    uint8_t jam = getIntPart(data, idx);
-    uint8_t menit = getIntPart(data, idx);
-    uint8_t hari = getIntPart(data, idx);
-    if (jam < 24 && menit < 60 && hari < 7) {
-      setTime(jam, menit, 0, 1, 1, 2024);
-      currentDay = hari;
-      lastTimeReceived = millis(); // perbarui waktu koneksi
-    }
-    return;
+ // --- Parsing TIME ---
+if (data.startsWith("TIME:")) {
+  int idx = 5;
+  uint8_t jam    = getIntPart(data, idx);
+  uint8_t menit  = getIntPart(data, idx);
+  uint8_t detik  = getIntPart(data, idx);
+  uint8_t hari   = getIntPart(data, idx);
+
+  if (jam < 24 && menit < 60 && detik < 60 && hari < 7) {
+    setTime(jam, menit, detik, 1, 1, 2024);
+    currentDay = hari;
+    lastTimeReceived = millis(); // perbarui waktu koneksi
+    Serial.print(F("Waktu diatur ke: "));
+    Serial.print(jam); Serial.print(":");
+    Serial.print(menit); Serial.print(":");
+    Serial.print(detik); Serial.print(" | Hari ke-");
+    Serial.println(hari);
+  } else {
+    Serial.println(F("Format TIME tidak valid."));
   }
+  return;
+}
+
 
   // --- Parsing VOL ---
   if (data.startsWith("VOL:")) {
