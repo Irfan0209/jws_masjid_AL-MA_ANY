@@ -35,8 +35,8 @@ const char* ssid = "JAM_PANEL";
 const char* password = "00000000";
 
 // Untuk OTA mode
-const char* ota_ssid = "KELUARGA02";
-const char* ota_pass = "suhartono";
+const char* ota_ssid = "IRFAN_A";
+const char* ota_pass = "00000000";
 
 WebSocketsClient webSocket;
 
@@ -48,6 +48,13 @@ bool wifiConnected = false;
 bool wsConnected = false;
 bool modeSetting = false;
 bool modeR = false;
+
+//variabel untuk led status system
+static uint8_t m_Counter = 0;
+static uint16_t waveStepDelay = 20;  // Delay antar frame LED breathing (ms)
+static uint32_t lastWaveMillis = 0;
+//uint32_t lastTimeReceived = 0;
+//const uint16_t TIMEOUT_INTERVAL = 70000; // 70 detik, lebih dari 1 menit
 
 #define LED_WIFI 2
 #define EEPROM_SIZE 512
@@ -99,7 +106,7 @@ void startOTAMode() {
 
 // ------------------- Setup -------------------
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(LED_WIFI, OUTPUT);
   digitalWrite(LED_WIFI, LOW);
   EEPROM.begin(EEPROM_SIZE);
@@ -117,7 +124,7 @@ void setup() {
   lastWiFiAttempt = millis();
 
   Serial.println("⏳ Mencoba koneksi WiFi...");
-
+  Serial.print("MODER: ");Serial.println(modeR);
   webSocket.onEvent(webSocketEvent);
   webSocket.setReconnectInterval(5000);
 }
@@ -127,10 +134,13 @@ void loop() {
   // Jika mode OTA aktif, jalankan OTA
   if (modeR == 1) {
     ArduinoOTA.handle();
+    getStatusRun();
     return;
+  }else{
+    checkSerialCommand();
   }
   
-  checkSerialCommand();
+
 
   if (!wifiConnected && millis() - lastWiFiAttempt >= wifiRetryInterval) {
     lastWiFiAttempt = millis();
@@ -144,11 +154,11 @@ void loop() {
     } 
   }
 
-  if (wifiConnected && !modeSetting) {
+  if (wifiConnected && !modeSetting && !modeR) {
     webSocket.loop();
   }
 
-  digitalWrite(LED_WIFI, (wifiConnected && wsConnected && !modeSetting) ? HIGH : LOW);
+  digitalWrite(LED_WIFI, (wifiConnected && wsConnected && !modeSetting && !modeR) ? HIGH : LOW);
 }
 
 // ------------------- Perintah Serial -------------------
@@ -193,4 +203,24 @@ void checkSerialCommand() {
       } 
     }
   }
+}
+
+void getStatusRun() {
+  uint32_t now = millis();
+  if (now - lastWaveMillis >= waveStepDelay) {
+    lastWaveMillis = now;
+    updateWaveLED();
+  }
+}
+
+void updateWaveLED() {
+  // brightness naik turun dari 0 - 255 - 0
+  uint8_t brightness = (m_Counter < 128) ? m_Counter * 2 : (255 - m_Counter) * 2;
+  setLED(brightness);
+
+  m_Counter = (m_Counter + 1) % 256;  // loop kembali ke 0 setelah 255
+}
+
+void setLED(uint8_t brightness) {
+  analogWrite(LED_WIFI, brightness);
 }
