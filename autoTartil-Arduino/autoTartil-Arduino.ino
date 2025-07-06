@@ -36,7 +36,7 @@ OneButton butt_restart(RESTART_BUTTON, true);
 
 #define HARI_TOTAL  8 // 7 hari + SemuaHari (index ke-7)
 #define WAKTU_TOTAL 5
-#define MAX_FILE    25
+#define MAX_FILE    30
 #define MAX_FOLDER  3
 
 struct WaktuConfig {
@@ -164,7 +164,7 @@ void cekStatusSystem() {
 }
 
 void parseData(String data) {
-  Serial.println("DATA: " + data);
+  //Serial.println("DATA: " + data);
 
  // --- Parsing TIME ---
 if (data.startsWith("TIME:")) {
@@ -178,13 +178,13 @@ if (data.startsWith("TIME:")) {
     setTime(jam, menit, detik, 1, 1, 2024);
     currentDay = hari;
     lastTimeReceived = millis(); // perbarui waktu koneksi
-    Serial.print(F("Waktu diatur ke: "));
-    Serial.print(jam); Serial.print(":");
-    Serial.print(menit); Serial.print(":");
-    Serial.print(detik); Serial.print(" | Hari ke-");
-    Serial.println(hari);
+//    Serial.print(F("Waktu diatur ke: "));
+//    Serial.print(jam); Serial.print(":");
+//    Serial.print(menit); Serial.print(":");
+//    Serial.print(detik); Serial.print(" | Hari ke-");
+//    Serial.println(hari);
   } else {
-    Serial.println(F("Format TIME tidak valid."));
+    //Serial.println(F("Format TIME tidak valid."));
   }
   return;
 }
@@ -234,8 +234,8 @@ for (int i = 0; i < 3; i++) {
 }
 
  for (int i = 0; i < 3; i++) {
-  Serial.print("list["); Serial.print(i); Serial.print("] = ");
-  Serial.println(cfg.list[i]);
+//  Serial.print("list["); Serial.print(i); Serial.print("] = ");
+//  Serial.println(cfg.list[i]);
 }
 
   }
@@ -255,9 +255,9 @@ for (int i = 0; i < 3; i++) {
       uint16_t durasi = getDurasiTartil(folder, file);
       if (durasi > 0) {
         dfplayer.playFolder(folder, file);
-        Serial.print("Memutar manual: folder "); Serial.print(folder);
-        Serial.print(", file "); Serial.print(file);
-        Serial.print(", durasi "); Serial.print(durasi); Serial.println(" detik");
+//        Serial.print("Memutar manual: folder "); Serial.print(folder);
+//        Serial.print(", file "); Serial.print(file);
+//        Serial.print(", durasi "); Serial.print(durasi); Serial.println(" detik");
 
         digitalWrite(RELAY_PIN, HIGH);
         tartilMulaiMillis    = millis();
@@ -267,7 +267,7 @@ for (int i = 0; i < 3; i++) {
         manualSedangDiputar  = true;
         relayMenungguMati    = false;
       } else {
-        Serial.println("Durasi file 0, tidak diputar.");
+        //Serial.println("Durasi file 0, tidak diputar.");
       }
     }
     return;
@@ -281,7 +281,7 @@ for (int i = 0; i < 3; i++) {
     tartilSedangDiputar = false;
     adzanSedangDiputar = false;
     manualSedangDiputar = false;
-    Serial.println("STOP: DFPlayer dan relay dimatikan");
+    //Serial.println("STOP: DFPlayer dan relay dimatikan");
     return;
   }
 /*
@@ -341,12 +341,12 @@ if (data.startsWith("JWS:")) {
   }
 
   saveToEEPROM();
-  Serial.println("Jadwal Sholat diperbarui:");
-  for (int i = 0; i < WAKTU_TOTAL; i++) {
-    Serial.print(" - Waktu "); Serial.print(i);
-    Serial.print(": "); Serial.print(jamSholat[i]);
-    Serial.print(":"); Serial.println(menitSholat[i]);
-  }
+  //Serial.println("Jadwal Sholat diperbarui:");
+//  for (int i = 0; i < WAKTU_TOTAL; i++) {
+//    Serial.print(" - Waktu "); Serial.print(i);
+//    Serial.print(": "); Serial.print(jamSholat[i]);
+//    Serial.print(":"); Serial.println(menitSholat[i]);
+//  }
   return;
 }
 
@@ -362,8 +362,8 @@ void cekSelesaiManual() {
       dfplayer.stop();
       relayOffDelayMillis = millis();
       relayMenungguMati = true;
-      Serial.println("Manual selesai, relay akan dimatikan setelah delay.");
-      Serial.println("Manual selesai, DFPlayer dan relay akan dimatikan setelah delay.");
+//      Serial.println("Manual selesai, relay akan dimatikan setelah delay.");
+//      Serial.println("Manual selesai, DFPlayer dan relay akan dimatikan setelah delay.");
     }
   }
 }
@@ -391,6 +391,13 @@ void cekDanPutarSholatNonBlocking() {
   if (tartilSedangDiputar || adzanSedangDiputar) return;
 
   uint32_t now = hour() * 3600UL + minute() * 60UL + second();
+
+  if(minute() == 0 && second() == 0){
+    Serial.println("jadwal");
+  }
+  else if(minute() == 30 && second() == 0){
+    Serial.println("jadwal");
+  }
 
   for (byte w = 0; w < WAKTU_TOTAL; w++) {
     WaktuConfig &cfg = jadwal[currentDay][w];
@@ -429,15 +436,15 @@ void cekDanPutarSholatNonBlocking() {
         tartilMulaiMillis = millis();
         dfplayer.playFolder(tartilFolder, f);
 
-        Serial.println(F("Tartil dimulai."));
-        Serial.print(F("Folder: ")); Serial.print(tartilFolder);
-        Serial.print(F(" File: ")); Serial.println(f);
+//        Serial.println(F("Tartil dimulai."));
+//        Serial.print(F("Folder: ")); Serial.print(tartilFolder);
+//        Serial.print(F(" File: ")); Serial.println(f);
       } else if (cfg.aktifAdzan) {
         adzanDurasi = getDurasiAdzan(cfg.fileAdzan) * 1000UL;
         adzanMulaiMillis = millis();
         adzanSedangDiputar = true;
         dfplayer.playFolder(11, cfg.fileAdzan);
-        Serial.println(F("Memutar adzan (tanpa tartil)."));
+        //Serial.println(F("Memutar adzan (tanpa tartil)."));
       }
 
       lastTriggerMillis = millis();
@@ -459,11 +466,11 @@ void cekSelesaiTartil() {
           dfplayer.playFolder(tartilFolder, nextFile);
           tartilDurasi = durasi * 1000UL;
           tartilMulaiMillis = millis();
-          Serial.print("Memutar tartil ke-");
-          Serial.print(tartilIndex + 1);
-          Serial.print(": folder "); Serial.print(tartilFolder);
-          Serial.print(", file "); Serial.print(nextFile);
-          Serial.print(", durasi "); Serial.println(durasi);
+//          Serial.print("Memutar tartil ke-");
+//          Serial.print(tartilIndex + 1);
+//          Serial.print(": folder "); Serial.print(tartilFolder);
+//          Serial.print(", file "); Serial.print(nextFile);
+//          Serial.print(", durasi "); Serial.println(durasi);
           return;
         }
       }
@@ -478,10 +485,10 @@ void cekSelesaiTartil() {
       adzanDurasi = getDurasiAdzan(currentCfg->fileAdzan) * 1000UL;
       adzanMulaiMillis = millis();
       adzanSedangDiputar = true;
-      Serial.println("Tartil selesai, memutar adzan.");
+      //Serial.println("Tartil selesai, memutar adzan.");
     } else {
       matikanSemuaAudio();
-      Serial.println("Tartil selesai, tidak ada adzan. Relay akan dimatikan.");
+      //Serial.println("Tartil selesai, tidak ada adzan. Relay akan dimatikan.");
     }
   }
 }
@@ -499,7 +506,7 @@ void matikanSemuaAudio() {
 void cekRelayOffDelay() {
   if (relayMenungguMati && millis() - relayOffDelayMillis >= 5000) {
     digitalWrite(RELAY_PIN, LOW);
-    Serial.println("cekRelayOffDelay");
+    //Serial.println("cekRelayOffDelay");
     relayMenungguMati = false;
     manualSedangDiputar = false;
   }
@@ -511,7 +518,7 @@ void cekSelesaiAdzan() {
     dfplayer.stop();
     adzanSedangDiputar = false;
     digitalWrite(RELAY_PIN, LOW); // Matikan relay setelah adzan selesai
-    Serial.println("selesai adzan aktif");
+    //Serial.println("selesai adzan aktif");
   }
 }
 
@@ -537,16 +544,16 @@ void setLED(uint8_t brightness) {
 
 void NORMAL(){
   STATUS_MODE = false;
-  Serial.println("SETTING=0");
+  Serial.println("NORMAL");
 }
 
 void SETTING(){
   STATUS_MODE = true;
-  Serial.println("SETTING=1");
+  Serial.println("SETTING");
 }
 
 void RESTART(){
-  Serial.println("restart=1");
+  Serial.println("restart");
 }
 
 void saveToEEPROM() {
@@ -588,53 +595,53 @@ void saveToEEPROM() {
 
 void loadFromEEPROM() {
   if (EEPROM.read(EEPROM_ADDR_MAGIC) != EEPROM_MAGIC) {
-    Serial.println("EEPROM belum diinisialisasi. Lewati load.");
+    //Serial.println("EEPROM belum diinisialisasi. Lewati load.");
     return;
   }
 
-  Serial.println("Memuat konfigurasi dari EEPROM...");
+  //Serial.println("Memuat konfigurasi dari EEPROM...");
   int addr = 0;
   for (int h = 0; h < HARI_TOTAL; h++) {
     for (int w = 0; w < WAKTU_TOTAL; w++) {
       EEPROM.get(addr, jadwal[h][w]);
       addr += sizeof(WaktuConfig);
-      Serial.print("HR:"); Serial.print(h);
-      Serial.print(" W"); Serial.print(w);
-      Serial.print(" Aktif:"); Serial.print(jadwal[h][w].aktif);
-      Serial.print(" Adzan:"); Serial.print(jadwal[h][w].aktifAdzan);
-      Serial.print(" FileAdzan:"); Serial.print(jadwal[h][w].fileAdzan);
-      Serial.print(" TartilDulu:"); Serial.print(jadwal[h][w].tartilDulu);
-      Serial.print(" Folder:"); Serial.print(jadwal[h][w].folder);
-      Serial.print(" List:");
-      Serial.print(jadwal[h][w].list[0]); Serial.print("-");
-      Serial.print(jadwal[h][w].list[1]); Serial.print("-");
-      Serial.println(jadwal[h][w].list[2]);
+//      Serial.print("HR:"); Serial.print(h);
+//      Serial.print(" W"); Serial.print(w);
+//      Serial.print(" Aktif:"); Serial.print(jadwal[h][w].aktif);
+//      Serial.print(" Adzan:"); Serial.print(jadwal[h][w].aktifAdzan);
+//      Serial.print(" FileAdzan:"); Serial.print(jadwal[h][w].fileAdzan);
+//      Serial.print(" TartilDulu:"); Serial.print(jadwal[h][w].tartilDulu);
+//      Serial.print(" Folder:"); Serial.print(jadwal[h][w].folder);
+//      Serial.print(" List:");
+//      Serial.print(jadwal[h][w].list[0]); Serial.print("-");
+//      Serial.print(jadwal[h][w].list[1]); Serial.print("-");
+//      Serial.println(jadwal[h][w].list[2]);
     }
   }
   for (int i = 0; i < MAX_FILE; i++) {
     EEPROM.get(addr, durasiAdzan[i]);
     addr += sizeof(uint16_t);
-    Serial.print("adzan["); Serial.print(i);
-    Serial.print("] = "); Serial.println(durasiAdzan[i]);
+//    Serial.print("adzan["); Serial.print(i);
+//    Serial.print("] = "); Serial.println(durasiAdzan[i]);
   }
   for (int f = 0; f < MAX_FOLDER; f++) {
     for (int i = 0; i < MAX_FILE; i++) {
       EEPROM.get(addr, durasiTartil[f][i]);
       addr += sizeof(uint16_t);
-      Serial.print("Tartil["); Serial.print(f); Serial.print("]["); Serial.print(i);
-      Serial.print("] = "); Serial.println(durasiTartil[f][i]);
+//      Serial.print("Tartil["); Serial.print(f); Serial.print("]["); Serial.print(i);
+//      Serial.print("] = "); Serial.println(durasiTartil[f][i]);
     }
   }
   EEPROM.get(addr, volumeDFPlayer);
   addr += sizeof(volumeDFPlayer);
-  Serial.print("Volume: "); Serial.println(volumeDFPlayer);
+  //Serial.print("Volume: "); Serial.println(volumeDFPlayer);
 
   for (int i = 0; i < WAKTU_TOTAL; i++) {
   EEPROM.get(addr, jamSholat[i]); addr += sizeof(uint8_t);
   EEPROM.get(addr, menitSholat[i]); addr += sizeof(uint8_t);
-  Serial.print("jamSholat["); Serial.print(i);
-  Serial.print("] = "); Serial.println(jamSholat[i]);
-  Serial.print("menitSholat["); Serial.print(i);
-  Serial.print("] = "); Serial.println(menitSholat[i]);
+//  Serial.print("jamSholat["); Serial.print(i);
+//  Serial.print("] = "); Serial.println(jamSholat[i]);
+//  Serial.print("menitSholat["); Serial.print(i);
+//  Serial.print("] = "); Serial.println(menitSholat[i]);
 }
 }
