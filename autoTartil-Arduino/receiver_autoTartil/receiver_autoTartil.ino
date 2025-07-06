@@ -84,6 +84,14 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
     case WStype_TEXT: {
       String msg = String((char*)payload);
       Serial.println(msg);
+      if (msg == "mode=1") {
+        saveModeR(1);
+        delay(500);
+        ESP.restart();
+      }else if(msg == "restart"){
+        delay(500);
+        ESP.restart();
+      }
       break;
     }
   }
@@ -169,7 +177,7 @@ void checkSerialCommand() {
 
     if (cmd.equalsIgnoreCase("restart")) {
       if (wsConnected) {
-        webSocket.sendTXT("restart=1");
+        webSocket.sendTXT("restart");
       } 
     } else if (cmd.equalsIgnoreCase("SETTING")) {
       modeSetting = true;
@@ -192,12 +200,14 @@ void checkSerialCommand() {
         lastWiFiAttempt = millis();
       }
 
-    } else if (cmd.startsWith("modeR=1")) {
-      saveModeR(1);
-      delay(500);
-      ESP.restart();
-
-    } else if (cmd.equalsIgnoreCase("jadwal")) {
+    }
+//    else if (cmd.startsWith("modeR=1")) {
+//      saveModeR(1);
+//      delay(500);
+//      ESP.restart();
+//
+//    }
+    else if (cmd.equalsIgnoreCase("jadwal")) {
       if (wsConnected) {
         webSocket.sendTXT("jadwal");
       } 
