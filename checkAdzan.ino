@@ -50,17 +50,27 @@ void check() {
 
     if (tmr - saveTmr > 500 && stateSendSholat == true) {
         saveTmr = tmr;
-        
-        float stime = sholatT[cekList];
-        uint8_t hours = floor(stime);
-        uint8_t minutes = floor((stime - (float)hours) * 60);
-        //uint8_t ssecond = floor((stime - (float)hours - (float)minutes / 60) * 3600);
-
-        //if(cekList <= 4){ 
-          Serial.println("W:" + String(cekList) + "," + String(hours) + "," + String(minutes) ); 
-          cekList++;
-          if(cekList == 5) {stateSendSholat = false; cekList = 0;}
-       // }
+         String jwsData = "JWS:";
+    for (uint8_t i = 0; i < 5; i++) {
+      uint8_t h = floor(sholatT[i]);
+      uint8_t m = floor((sholatT[i] - (float)h) * 60);
+      jwsData += (h < 10 ? "0" : "") + String(h) + "," + (m < 10 ? "0" : "") + String(m);
+      if (i < 4) jwsData += "|";
+    }
+    Serial.println(jwsData); // Dikirim ke Serial Monitor
+//        float stime = sholatT[cekList];
+//        uint8_t hours = floor(stime);
+//        uint8_t minutes = floor((stime - (float)hours) * 60);
+//        //uint8_t ssecond = floor((stime - (float)hours - (float)minutes / 60) * 3600);
+//
+//        
+//          Serial.println("W:" + String(cekList) + "," + String(hours) + "," + String(minutes) ); 
+//          cekList++;
+        //  if(cekList == 5) {
+            stateSendSholat = false; 
+            cekList = 0;
+            //}
+       
     }
 
 }

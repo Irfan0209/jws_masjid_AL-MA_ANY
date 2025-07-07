@@ -1,7 +1,9 @@
+// ESP8266 Server with OTA Upload Mode
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <WebSocketsServer.h>
 #include <ESP_EEPROM.h>
+#include <ArduinoOTA.h>
 
 #define EEPROM_SIZE 512
 #define ADDR_MODE        0
@@ -9,6 +11,10 @@
 
 char ssid[20]     = "JAM_PANEL";
 char password[20] = "00000000";
+
+const char* otaSsid = "IRFAN_A";
+const char* otaPass = "00000000";
+const char* otaHost = "SERVER";
 
 ESP8266WebServer server(80);
 WebSocketsServer webSocket(81);
@@ -18,6 +24,7 @@ IPAddress gateway(192, 168, 2, 1);
 IPAddress subnet(255, 255, 255, 0);
 
 bool clientReady[5] = { false, false, false, false, false };
+bool modeOTA = false;
 
 unsigned long lastTimeSend = 0;
 const unsigned long intervalSendTime = 60000; // 1 menit
@@ -30,21 +37,16 @@ void getData(String input) {
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   switch (type) {
     case WStype_CONNECTED:
-      //Serial.printf("[WS] Client %u connected\n", num);
       clientReady[num] = false;
       break;
-
     case WStype_DISCONNECTED:
-      //Serial.printf("[WS] Client %u disconnected\n", num);
       clientReady[num] = false;
       break;
-
     case WStype_TEXT: {
       String msg = String((char*)payload);
-
       if (msg == "CLIENT_READY") {
         clientReady[num] = true;
-      } else if(msg == "restart"){
+      } else if (msg == "restart") {
         getData(msg);
         delay(500);
         ESP.restart();
@@ -55,6 +57,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     }
   }
 }
+
 
 void handleSetTime() {
   String data = "";
@@ -171,8 +174,8 @@ void handleSetTime() {
     server.send(200, "text/plain", "OK");// "durasi adzan diupdate");
   }
   if (server.hasArg("CoHi")) {
-    data = server.arg("CoHi"); // Atur latitude
-    data = "CoHi=" + data;
+    data = server.arg("CoHi"); // Atur latitude    data = "CoHi=" + data;
+
     //Serial.println(data);
     getData(data);
     server.send(200, "text/plain", "OK");//"coreksi hijriah diupdate");
@@ -187,10 +190,14 @@ void handleSetTime() {
   }
   if (server.hasArg("mode")) {
     data = server.arg("mode"); // Atur status mode
+    EEPROM.write(ADDR_MODE, data.toInt());
+    EEPROM.commit();
     data = "mode=" + data;
     kirimDataKeClient(data);
     getData(data);
     server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+    delay(500);
+    ESP.restart();
   }
    if (server.hasArg("PLAY")) {//
     data = server.arg("PLAY"); // Atur status play
@@ -246,20 +253,46 @@ void AP_init() {
   WiFi.softAP(ssid, password);
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
 
-  delay(1000);
-//  Serial.print("AP IP address: ");
-//  Serial.println(WiFi.softAPIP());
-
   server.on("/setPanel", handleSetTime);
   server.begin();
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
+}
 
-  //Serial.println("Web & WebSocket Server started");
+void ONLINE() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(otaSsid, otaPass);
+
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    //Serial.println("OTA WiFi gagal. Rebooting...");
+    delay(5000);
+    ESP.restart();
+  }
+
+  ArduinoOTA.setHostname(otaHost);
+  //ArduinoOTA.setPassword("123456");
+
+ // ArduinoOTA.onStart([]() { Serial.println("Start updating..."); });
+  ArduinoOTA.onEnd([]() {
+ //   Serial.println("\nEnd");
+//    EEPROM.write(ADDR_MODE, 0);
+//    EEPROM.commit();
+    delay(1000);
+    ESP.restart();
+  });
+//  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+//    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+//  });
+//  ArduinoOTA.onError([](ota_error_t error) {
+//    Serial.printf("OTA Error[%u]\n", error);
+//  });
+
+  ArduinoOTA.begin();
+  //Serial.println("OTA Ready");
 }
 
 void kirimDataKeClient(String data) {
-  //String data = "mode=1";
+
   for (uint8_t i = 0; i < 5; i++) {
     if (clientReady[i] && webSocket.clientIsConnected(i)) {
       webSocket.sendTXT(i, data);
@@ -274,8 +307,8 @@ void cekSerialMonitor() {
     String input = Serial.readStringUntil('\n');
     input.trim();
     //Serial.print("[Serial] Kirim ke semua client: ");
-    Serial.println(input);
-
+    //Serial.println(input);
+    getData(input);
     for (uint8_t i = 0; i < 5; i++) {
       if (clientReady[i] && webSocket.clientIsConnected(i)) {
         webSocket.sendTXT(i, input);
@@ -295,16 +328,28 @@ int getIntPart(String &s, int &pos) {
 void setup() {
   Serial.begin(9600);
   EEPROM.begin(EEPROM_SIZE);
-  AP_init();
+  modeOTA = EEPROM.read(ADDR_MODE);
+
+  if (modeOTA) {
+    EEPROM.write(ADDR_MODE, 0);
+    EEPROM.commit();
+    ONLINE();
+  } else {
+    AP_init();
+  }
 }
 
 void loop() {
-  server.handleClient();
-  webSocket.loop();
-  cekSerialMonitor();
+  if (modeOTA) {
+    ArduinoOTA.handle();
+  } else {
+    server.handleClient();
+    webSocket.loop();
+    cekSerialMonitor();
 
-//  if (millis() - lastTimeSend >= intervalSendTime) {
-//    lastTimeSend = millis();
-//    kirimDataKeClient();
-//  }
+//    if (millis() - lastTimeSend >= intervalSendTime) {
+//      lastTimeSend = millis();
+//      kirimDataKeClient("TIME:04,30,0,0");
+//    }
+  }
 }
