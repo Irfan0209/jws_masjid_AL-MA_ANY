@@ -83,7 +83,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       break;
     case WStype_TEXT: {
       String msg = String((char*)payload);
-      Serial.println(msg);
+      //Serial.println(msg);
       if (msg == "mode=1") {
         saveModeR(1);
         delay(500);
@@ -91,6 +91,8 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       }else if(msg == "restart"){
         delay(500);
         ESP.restart();
+      }else{
+        Serial.println(msg);
       }
       break;
     }

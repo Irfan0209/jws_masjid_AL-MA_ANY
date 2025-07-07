@@ -186,12 +186,45 @@ void handleSetTime() {
     server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
   }
   if (server.hasArg("mode")) {
-    data = server.arg("mode"); // Atur status buzzer
+    data = server.arg("mode"); // Atur status mode
     data = "mode=" + data;
-    kirimDataKeClient();
+    kirimDataKeClient(data);
     getData(data);
     server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
   }
+   if (server.hasArg("PLAY")) {//
+    data = server.arg("PLAY"); // Atur status play
+    //Serial.println("data mentah: " + data);
+    int idx = 0;
+    byte folder = getIntPart(data,idx);
+    byte file   = getIntPart(data,idx);
+    data = "PLAY:" + String(folder) + "," + String(file);
+    kirimDataKeClient(data);
+    //getData(data);
+    server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+  }
+   if (server.hasArg("STOP")) {
+//    data = server.arg("mode"); // Atur status buzzer
+    data = "STOP";;
+    kirimDataKeClient(data);
+    //getData(data);
+    server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+  }
+  if (server.hasArg("VOL")) {
+    data = server.arg("VOL"); // Atur status mode
+    data = "VOL:" + data;
+    kirimDataKeClient(data);
+    //getData(data);
+    server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+  }
+  if (server.hasArg("HR")) {
+    data = server.arg("HR"); // Ambil argumen HR
+    //Serial.println("Data HR diterima: " + data); // Kirim ke Serial Monitor
+    //getData("HR=" + data); // Jika ingin diproses lebih lanjut di fungsi getData()
+    kirimDataKeClient("HR:" + data); // (Opsional) Kirim juga ke semua client via WebSocket
+    server.send(200, "text/plain", "OK");
+  }
+
   if (server.hasArg("status")) {
     server.send(200, "text/plain", "CONNECTED");
   }
@@ -225,8 +258,8 @@ void AP_init() {
   //Serial.println("Web & WebSocket Server started");
 }
 
-void kirimDataKeClient() {
-  String data = "mode=1";
+void kirimDataKeClient(String data) {
+  //String data = "mode=1";
   for (uint8_t i = 0; i < 5; i++) {
     if (clientReady[i] && webSocket.clientIsConnected(i)) {
       webSocket.sendTXT(i, data);
@@ -249,6 +282,14 @@ void cekSerialMonitor() {
       }
     }
   }
+}
+
+int getIntPart(String &s, int &pos) {
+  int comma = s.indexOf(',', pos);
+  if (comma == -1) comma = s.length();
+  int val = s.substring(pos, comma).toInt();
+  pos = comma + 1;
+  return val;
 }
 
 void setup() {
