@@ -63,7 +63,7 @@ Hijriyah Hijir;
 
 uint8_t iqomah[]        = {1,1,1,1,1,1};
 uint8_t displayBlink[]  = {1,1,1,1,1,1};
-uint8_t dataIhty[]      = {3,0,3,3,0,3};
+uint8_t dataIhty[]      = {0,0,0,0,0,0};
 
 struct Config {
   uint8_t durasiadzan = 40;

@@ -231,7 +231,29 @@ void handleSetTime() {
     kirimDataKeClient("HR:" + data); // (Opsional) Kirim juga ke semua client via WebSocket
     server.send(200, "text/plain", "OK");
   }
-
+  if (server.hasArg("NAMEFILE")) {//
+    data = server.arg("NAMEFILE"); // Atur status play
+    //Serial.println("data mentah: " + data);
+    int idx = 0;
+    byte folder = getIntPart(data,idx);
+    byte file   = getIntPart(data,idx);
+    byte durasi = getIntPart(data,idx);
+    data = "NAMEFILE:" + String(folder) + "," + String(file)+ "," + String(durasi);
+    kirimDataKeClient(data);
+    //getData(data);
+    server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+  }
+  if (server.hasArg("ADZAN")) {//
+    data = server.arg("ADZAN"); // Atur status play
+    //Serial.println("data mentah: " + data);
+    int idx = 0;
+    byte file = getIntPart(data,idx);
+    byte durasi   = getIntPart(data,idx);
+    data = "ADZAN:" + String(file) + "," + String(durasi);
+    kirimDataKeClient(data);
+    //getData(data);
+    server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+  }
   if (server.hasArg("status")) {
     server.send(200, "text/plain", "CONNECTED");
   }

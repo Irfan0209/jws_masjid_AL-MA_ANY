@@ -105,12 +105,17 @@ void startOTAMode() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ota_ssid, ota_pass);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    //Serial.print(".");
+ while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    //Serial.println("OTA WiFi gagal. Rebooting...");
+    delay(5000);
+    ESP.restart();
   }
+  ArduinoOTA.setHostname("CLIENT");
 
-  ArduinoOTA.setHostname("ESP_CLIENT");
+   ArduinoOTA.onEnd([]() {
+    delay(1000);
+    ESP.restart();
+  });
   ArduinoOTA.begin();
 }
 
