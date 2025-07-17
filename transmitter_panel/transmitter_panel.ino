@@ -47,7 +47,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       if (msg == "CLIENT_READY") {
         clientReady[num] = true;
       } else if (msg == "restart") {
-        getData(msg);
+        getData(msg + "=1");
         delay(500);
         ESP.restart();
       } else {

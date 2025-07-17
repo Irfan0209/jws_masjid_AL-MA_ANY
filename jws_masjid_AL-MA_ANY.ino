@@ -438,7 +438,7 @@ void ONLINE(){
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
+    Serial.println("restart");
     stateMode = 0;
     EEPROM.write(ADDR_MODE, stateMode);
     EEPROM.commit();
@@ -466,7 +466,7 @@ void ONLINE(){
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   EEPROM.begin(EEPROM_SIZE);
   
   pinMode(BUZZ, OUTPUT); 
@@ -515,7 +515,23 @@ for(int i = 0; i < 4; i++)
 
 void loop() {
   
-  stateMode == 1? ArduinoOTA.handle() : handleSetTimeSerial();
+  if(stateMode == 1){
+    ArduinoOTA.handle(); 
+    if (Serial.available()) {
+        String input = Serial.readStringUntil('\n');
+        input.trim();
+      
+        if (input.equalsIgnoreCase("restart=1")) {
+           stateMode = 0;
+           EEPROM.write(ADDR_MODE, stateMode);
+           EEPROM.commit();
+           delay(1000);
+           ESP.restart();
+        }
+   }
+  }else{
+    handleSetTimeSerial();
+  }
   check();
   islam();
 
@@ -573,22 +589,28 @@ void getData(String input) {
     String value = input.substring(eq + 1);
     
     if (key == "Tm") {
-      String setJam = value;
-      RtcDateTime now = Rtc.GetDateTime();
-      uint8_t colon = value.indexOf(':');
-      uint8_t dash1 = value.indexOf('-');
-      uint8_t dash2 = value.indexOf('-', dash1 + 1);
-      uint8_t dash3 = value.indexOf('-', dash2 + 1);
+  String setJam = value;
 
-      if (colon != -1 && dash1 != -1 && dash2 != -1 && dash3 != -1) {
-        uint8_t jam = value.substring(0, colon).toInt();
-        uint8_t menit = value.substring(colon + 1, dash1).toInt();
-        uint8_t tanggal = value.substring(dash1 + 1, dash2).toInt();
-        uint8_t bulan = value.substring(dash2 + 1, dash3).toInt();
-        uint16_t tahun = value.substring(dash3 + 1).toInt();
-        Rtc.SetDateTime(RtcDateTime(tahun, bulan, tanggal, jam, menit, 00));
-      }
-    }
+  // Format: HH:MM:SS-Tanggal-Bulan-Tahun
+  uint8_t colon1 = value.indexOf(':');
+  uint8_t colon2 = value.indexOf(':', colon1 + 1);
+  uint8_t dash1 = value.indexOf('-');
+  uint8_t dash2 = value.indexOf('-', dash1 + 1);
+  uint8_t dash3 = value.indexOf('-', dash2 + 1);
+
+  if (colon1 != -1 && colon2 != -1 && dash1 != -1 && dash2 != -1 && dash3 != -1) {
+    uint8_t jam    = value.substring(0, colon1).toInt();
+    uint8_t menit  = value.substring(colon1 + 1, colon2).toInt();
+    uint8_t detik  = value.substring(colon2 + 1, dash1).toInt();
+    uint8_t tanggal= value.substring(dash1 + 1, dash2).toInt();
+    uint8_t bulan  = value.substring(dash2 + 1, dash3).toInt();
+    uint16_t tahun = value.substring(dash3 + 1).toInt();
+
+    Rtc.SetDateTime(RtcDateTime(tahun, bulan, tanggal,jam, menit, detik));
+    //JWS.Update(config.zonawaktu, config.latitude, config.longitude, config.altitude, year(),month(), day());
+     stateSendSholat = 1;
+  }
+}
 
     else if (key == "text") {
       int separatorIndex = value.indexOf('-');
@@ -732,7 +754,9 @@ void getData(String input) {
       if(state) {
         Buzzer(1); 
         Serial.println("RESTART_OK"); 
-        delay(3000);
+        stateMode = 0;
+        EEPROM.write(ADDR_MODE, stateMode); 
+        delay(1000);
         ESP.restart();
       }
     }

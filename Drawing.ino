@@ -480,7 +480,7 @@ void anim_JG()
       }
 
     if((Tmr-lsRn)>5000 and y ==17) {s=1;}
-    if (y == 0 and s==1) {Serial.println("TIME:" + String(BuffJ) + "," + String(BuffM) + "," + String(daynow)); s=0; show=ANIM_DATE;}//dwDone(DrawAdd);
+    if (y == 0 and s==1) {Serial.println("TIME:" + String(BuffJ) + "," + String(BuffM) + "," + String(BuffD) + "," + String(daynow)); s=0; show=ANIM_DATE;}//dwDone(DrawAdd);
     
     }
 
