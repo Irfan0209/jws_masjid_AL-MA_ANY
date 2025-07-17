@@ -12,8 +12,8 @@
 char ssid[20]     = "JAM_PANEL";
 char password[20] = "00000000";
 
-const char* otaSsid = "IRFAN_A";
-const char* otaPass = "00000000";
+const char* otaSsid = "KELUARGA02";
+const char* otaPass = "suhartono";
 const char* otaHost = "SERVER";
 
 ESP8266WebServer server(80);
@@ -50,14 +50,15 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
         getData(msg + "=1");
         delay(500);
         ESP.restart();
-      } else {
+      } else if (msg == "jadwal") {
+        getData(msg + "=1");
+      }else {
         getData(msg);
       }
       break;
     }
   }
 }
-
 
 void handleSetTime() {
   String data = "";
@@ -210,8 +211,17 @@ void handleSetTime() {
     //getData(data);
     server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
   }
+  if (server.hasArg("PLAD")) {//
+    data = server.arg("PLAD"); // Atur status play
+    //Serial.println("data mentah: " + data);
+    int idx = 0;
+    byte file   = getIntPart(data,idx);
+    data = "PLAD:" + String(file);
+    kirimDataKeClient(data);
+    //getData(data);
+    server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
+  }
    if (server.hasArg("STOP")) {
-//    data = server.arg("mode"); // Atur status buzzer
     data = "STOP";;
     kirimDataKeClient(data);
     //getData(data);
@@ -226,26 +236,23 @@ void handleSetTime() {
   }
   if (server.hasArg("HR")) {
     data = server.arg("HR"); // Ambil argumen HR
-    //Serial.println("Data HR diterima: " + data); // Kirim ke Serial Monitor
-    //getData("HR=" + data); // Jika ingin diproses lebih lanjut di fungsi getData()
     kirimDataKeClient("HR:" + data); // (Opsional) Kirim juga ke semua client via WebSocket
     server.send(200, "text/plain", "OK");
   }
-  if (server.hasArg("NAMEFILE")) {//
-    data = server.arg("NAMEFILE"); // Atur status play
+  if (server.hasArg("NAMAFILE")) {//
+    data = server.arg("NAMAFILE"); // Atur status play
     //Serial.println("data mentah: " + data);
     int idx = 0;
     byte folder = getIntPart(data,idx);
     byte file   = getIntPart(data,idx);
     byte durasi = getIntPart(data,idx);
-    data = "NAMEFILE:" + String(folder) + "," + String(file)+ "," + String(durasi);
+    data = "NAMAFILE:" + String(folder) + "," + String(file)+ "," + String(durasi);
     kirimDataKeClient(data);
     //getData(data);
     server.send(200, "text/plain","OK");// (stateBuzzer) ? "Suara Diaktifkan" : "Suara Dimatikan");
   }
   if (server.hasArg("ADZAN")) {//
     data = server.arg("ADZAN"); // Atur status play
-    //Serial.println("data mentah: " + data);
     int idx = 0;
     byte file = getIntPart(data,idx);
     byte durasi   = getIntPart(data,idx);
@@ -268,6 +275,7 @@ void handleSetTime() {
   data="";
   //EEPROM.commit();
 }
+
 
 void AP_init() {
   WiFi.mode(WIFI_AP);
@@ -292,23 +300,13 @@ void ONLINE() {
   }
 
   ArduinoOTA.setHostname(otaHost);
-  //ArduinoOTA.setPassword("123456");
-
- // ArduinoOTA.onStart([]() { Serial.println("Start updating..."); });
+ 
   ArduinoOTA.onEnd([]() {
- //   Serial.println("\nEnd");
-//    EEPROM.write(ADDR_MODE, 0);
-//    EEPROM.commit();
+    Serial.println("restart=1");
     delay(1000);
     ESP.restart();
   });
-//  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-//    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-//  });
-//  ArduinoOTA.onError([](ota_error_t error) {
-//    Serial.printf("OTA Error[%u]\n", error);
-//  });
-
+  
   ArduinoOTA.begin();
   //Serial.println("OTA Ready");
 }
@@ -330,7 +328,6 @@ void cekSerialMonitor() {
     input.trim();
     //Serial.print("[Serial] Kirim ke semua client: ");
     //Serial.println(input);
-    getData(input);
     for (uint8_t i = 0; i < 5; i++) {
       if (clientReady[i] && webSocket.clientIsConnected(i)) {
         webSocket.sendTXT(i, input);
@@ -364,14 +361,17 @@ void setup() {
 void loop() {
   if (modeOTA) {
     ArduinoOTA.handle();
+    if (Serial.available()) {
+      String input = Serial.readStringUntil('\n');
+      input.trim();
+      if (input.equalsIgnoreCase("restart")) {
+        delay(1000);
+        ESP.restart();
+      }
+    }
   } else {
     server.handleClient();
     webSocket.loop();
-    cekSerialMonitor();
-
-//    if (millis() - lastTimeSend >= intervalSendTime) {
-//      lastTimeSend = millis();
-//      kirimDataKeClient("TIME:04,30,0,0");
-//    }
+    cekSerialMonitor()
   }
 }
