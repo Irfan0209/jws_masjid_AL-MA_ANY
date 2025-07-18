@@ -35,8 +35,8 @@ const char* ssid = "JAM_PANEL";
 const char* password = "00000000";
 
 // Untuk OTA mode
-const char* ota_ssid = "IRFAN_A";
-const char* ota_pass = "00000000";
+const char* ota_ssid = "KELUARGA02";
+const char* ota_pass = "suhartono";
 
 WebSocketsClient webSocket;
 
