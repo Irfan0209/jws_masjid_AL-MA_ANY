@@ -19,13 +19,18 @@ void islam() {
   }
 
   if(timer - sv > 5000){
+    //RtcDateTime now = Rtc.GetDateTime();
     JWS.Update(config.zonawaktu, config.latitude, config.longitude, config.altitude, now.Year(), now.Month(), now.Day()); // Jalankan fungsi ini untuk update jadwal sholat
-    Hijir.Update(now.Year(), now.Month(), now.Day(), config.Correction);
     JWS.setIkhtiSu = dataIhty[0];
     JWS.setIkhtiDzu = dataIhty[1];
     JWS.setIkhtiAs = dataIhty[2];
     JWS.setIkhtiMa = dataIhty[3];
     JWS.setIkhtiIs = dataIhty[4];
+    Hijir.Update(now.Year(), now.Month(), now.Day(), config.Correction);
+    //now.Year(), now.Month(), now.Day(), config.Correction
+//    Serial.println("tahun: " + String(now.Year()));
+//    Serial.println("bulan: " + String(now.Month()));
+//    Serial.println("tanggal: " + String(now.Day()));
     sv = timer;
   }
 }

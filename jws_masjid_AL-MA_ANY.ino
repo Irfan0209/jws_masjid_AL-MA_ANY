@@ -531,9 +531,10 @@ void loop() {
    }
   }else{
     handleSetTimeSerial();
-  }
-  check();
+     check();
   islam();
+  }
+ 
 
  switch(show){
   case ANIM_CLOCK_BIG :
@@ -576,7 +577,7 @@ void loop() {
     buzzerUpload();
   break;
  };
-
+  
   buzzerWarning(stateBuzzWar);
   yield();
 }

@@ -245,7 +245,7 @@ void handleSetTime() {
     int idx = 0;
     byte folder = getIntPart(data,idx);
     byte file   = getIntPart(data,idx);
-    byte durasi = getIntPart(data,idx);
+    int durasi = getIntPart(data,idx);
     data = "NAMAFILE:" + String(folder) + "," + String(file)+ "," + String(durasi);
     kirimDataKeClient(data);
     //getData(data);
@@ -255,7 +255,7 @@ void handleSetTime() {
     data = server.arg("ADZAN"); // Atur status play
     int idx = 0;
     byte file = getIntPart(data,idx);
-    byte durasi   = getIntPart(data,idx);
+    int durasi   = getIntPart(data,idx);
     data = "ADZAN:" + String(file) + "," + String(durasi);
     kirimDataKeClient(data);
     //getData(data);
@@ -372,6 +372,6 @@ void loop() {
   } else {
     server.handleClient();
     webSocket.loop();
-    cekSerialMonitor()
+    cekSerialMonitor();
   }
 }
