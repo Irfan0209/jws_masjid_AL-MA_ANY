@@ -879,7 +879,7 @@ void loadFromEEPROM() {
 //  Serial.print("Buzzer: ");
 //  Serial.println(stateBuzzer);
 
-  stateMode = EEPROM.read(ADDR_MODE);
+  //stateMode = EEPROM.read(ADDR_MODE);
 //  Serial.print("mode: ");
 //  Serial.println(stateMode);
 
