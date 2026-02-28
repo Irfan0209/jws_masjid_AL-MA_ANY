@@ -15,10 +15,7 @@ int freeRam() {
 
 
 void restartArduino() {
-  wdt_enable(WDTO_15MS);  // timeout tercepat
-  while (1) {
-    // tunggu watchdog reset
-  }
+  digitalWrite(PIN_RESTART,LOW);
 }
 
 void checkRamWarning() {

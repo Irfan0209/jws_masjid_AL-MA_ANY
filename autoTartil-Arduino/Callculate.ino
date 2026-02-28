@@ -92,7 +92,7 @@ void cekDanPutarSholatNonBlocking() {
         tartilFolder = cfg.folder;
         tartilCounter = 0;
         tartilSedangDiputar = true;
-        manualSedangDiputar = false;
+       // manualSedangDiputar = false;
 
         byte f = cfg.list[tartilIndex];
         targetDurasi = getDurasiTartil(tartilFolder, f);
@@ -194,7 +194,7 @@ void matikanSemuaAudio() {
   digitalWrite(RELAY_PIN, HIGH);//relay mati
   tartilSedangDiputar = false;
   adzanSedangDiputar = false;
-  manualSedangDiputar = false;
+//  manualSedangDiputar = false;
 }
 
 void cekSelesaiAdzan() {
