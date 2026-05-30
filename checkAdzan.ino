@@ -1,76 +1,103 @@
 //================= cek waktu sholat ===================//
+
+static float lastStime[5] = { -1, -1, -1, -1, -1 };
+static uint8_t sholatHour[5];
+static uint8_t sholatMinute[5];
+static bool adzanFlag[5] = { 0 };
+
+
+
+
+//================= cek waktu sholat (REFRAKTOR) ===================//
 void check() {
+
+  static uint8_t counter = 0;
+  static uint32_t scanTmr = 0, sendTmr = 0;
+
+  uint32_t nowMs = millis();
+
+  // ================= CACHE UPDATE (float -> int) =================
+  
+  // Pilih waktu sholat sesuai list
+  float stime;
+  switch (counter) {
+    case 0: stime = JWS.floatSubuh; break;
+    case 1: stime = JWS.floatDzuhur; break;
+    case 2: stime = JWS.floatAshar; break;
+    case 3: stime = JWS.floatMaghrib; break;
+    case 4: stime = JWS.floatIsya; break;
+  }
+  
+  if (stime != lastStime[counter]) {
+
+    lastStime[counter] = stime;
+
+    uint8_t h = (uint8_t)stime;
+    uint8_t m = (uint8_t)((stime - h) * 60);
+
+    sholatHour[counter]   = h;
+    sholatMinute[counter] = m;
+
+    adzanFlag[counter] = false;   // reset jika jadwal berubah
+  }
+
+  // ================= CEK WAKTU ADZAN =================
+  if (!stateSendSholat && nowMs - scanTmr >= 100) {
+    scanTmr = nowMs;
+
     RtcDateTime now = Rtc.GetDateTime();
-    uint8_t jam = now.Hour();
+    uint8_t jam   = now.Hour();
     uint8_t menit = now.Minute();
     uint8_t detik = now.Second();
-    uint8_t daynow = now.DayOfWeek();
-    uint8_t hours, minutes;
-    static uint8_t counter = 0,cekList = 0;
-    static uint32_t lsTmr,saveTmr;
-    static bool adzanFlag[5] = {false, false, false, false, false};
-    float sholatT[]={JWS.floatSubuh,JWS.floatDzuhur,JWS.floatAshar,JWS.floatMaghrib,JWS.floatIsya};
-    uint32_t tmr = millis();
-    
-    
-    if (tmr - lsTmr > 100 && !stateSendSholat) {
-        lsTmr = tmr;
-        
-        float stime = sholatT[counter];
-        uint8_t hours = floor(stime);
-        uint8_t minutes = floor((stime - (float)hours) * 60);
-        //uint8_t ssecond = floor((stime - (float)hours - (float)minutes / 60) * 3600);
-    
-        if (!adzanFlag[counter]) {
-            if (jam == hours && menit == minutes && detik == 0) {
-                
-              if(daynow == 5 && counter == 1){
-                return ;
-              }else{
-                Disp.clear();
-                sholatNow = counter;
-                adzan = 1;
-                reset_x = 1;
-                list = 0;
-                lastList = 0;
-                show = ANIM_ADZAN;
-                adzanFlag[counter] = true;
-              }
-                
-            }
-        }
+    uint8_t day   = now.DayOfWeek();
 
-        if (jam != hours || menit != minutes) {
-            adzanFlag[counter] = false;
+    uint8_t h = sholatHour[counter];
+    uint8_t m = sholatMinute[counter];
+
+    if (!adzanFlag[counter]) {
+      if (jam == h && menit == m && detik == 0) {
+          //Serial.println("adzan");
+        // Jumat - Dzuhur tidak adzan
+        if (!(day == 5 && counter == 1)) {
+          sholatNow = counter;
+          adzan = 1;
+          reset_x = 1;
+          show = ANIM_ADZAN;
+          //line = ANIM_ZONK;
+          adzanFlag[counter] = true;
+          
         }
-        
-        
-        counter = (counter + 1) % 5;
+      }
+     
+      //Serial.println("counter:"+String(counter));
     }
+    
+  
+    // reset flag jika waktu sudah lewat
+    if (jam != h || menit != m) {
+      adzanFlag[counter] = false;
+    }
+    
+    counter++;
+    if (counter >= 5) counter = 0;
+  }
 
-    if (tmr - saveTmr > 500 && stateSendSholat == true) {
-        saveTmr = tmr;
-         String jwsData = "JWS:";
+  // ================= KIRIM DATA JWS =================
+  if (stateSendSholat && nowMs - sendTmr >= 500) {
+    sendTmr = nowMs;
+
+    char buf[64];
+    char *p = buf;
+    p += sprintf(p, "JWS:");
+
     for (uint8_t i = 0; i < 5; i++) {
-      uint8_t h = floor(sholatT[i]);
-      uint8_t m = floor((sholatT[i] - (float)h) * 60);
-      jwsData += (h < 10 ? "0" : "") + String(h) + "," + (m < 10 ? "0" : "") + String(m);
-      if (i < 4) jwsData += "|";
-    }
-    Serial.println(jwsData); // Dikirim ke Serial Monitor
-//        float stime = sholatT[cekList];
-//        uint8_t hours = floor(stime);
-//        uint8_t minutes = floor((stime - (float)hours) * 60);
-//        //uint8_t ssecond = floor((stime - (float)hours - (float)minutes / 60) * 3600);
-//
-//        
-//          Serial.println("W:" + String(cekList) + "," + String(hours) + "," + String(minutes) ); 
-//          cekList++;
-        //  if(cekList == 5) {
-            stateSendSholat = false; 
-            cekList = 0;
-            //}
-       
+      p += sprintf(p, "%02d,%02d", sholatHour[i], sholatMinute[i]);
+      if (i < 4) *p++ = '|';
     }
 
+    *p = '\0';
+    Serial.println(buf);
+
+    stateSendSholat = false;
+  }
 }

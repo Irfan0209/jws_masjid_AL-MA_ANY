@@ -3,14 +3,24 @@ void cekPotensiometerVolume() {
 
   if (millis() - lastCheck >= 1000) {  // Cek tiap 1 detik
     lastCheck = millis();
-    uint16_t analogValue = analogRead(PIN_POT);
-    uint8_t vol = map(analogValue, 0, 1023, 0, MAX_VOLUME);
+
+    uint32_t sum = 0;
+    // 50 sampel tanpa delay di dalam loop for
+    for (uint8_t i = 0; i < 80; i++) {
+        sum += analogRead(PIN_POT);
+    }
+    uint16_t averageRaw = sum / 80;
+
+    uint8_t vol = map(averageRaw, 0, 1023, 0, 30);
+     
+//    uint16_t analogValue = analogRead(PIN_POT);
+//    uint8_t vol = map(analogValue, 0, 1023, 0, MAX_VOLUME);
 
     if (vol != lastVolumeRead) {
       lastVolumeRead = vol;
       volumeDFPlayer = vol;
       dfplayer.volume(volumeDFPlayer);
-      saveToEEPROM();
+      //saveToEEPROM();
       Serial.print(F("volume:")); Serial.println(volumeDFPlayer);
     }
   }

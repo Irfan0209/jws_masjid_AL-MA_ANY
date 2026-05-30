@@ -125,14 +125,14 @@ void setup() {
   pinMode(LED_WIFI, OUTPUT);
   digitalWrite(LED_WIFI, LOW);
   EEPROM.begin(EEPROM_SIZE);
-  modeR = loadModeR();
+ // modeR = loadModeR();
   
   // Cek jika mode OTA aktif
-  if (modeR == 1) {
-    saveModeR(0); // Reset modeR agar kembali ke normal setelah OTA
-    startOTAMode();
-    return;
-  }
+//  if (modeR == 1) {
+//    saveModeR(0); // Reset modeR agar kembali ke normal setelah OTA
+//    startOTAMode();
+//    return;
+//  }
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -147,13 +147,13 @@ void setup() {
 // ------------------- Loop -------------------
 void loop() {
   // Jika mode OTA aktif, jalankan OTA
-  if (modeR == 1) {
-    ArduinoOTA.handle();
-    getStatusRun();
-    return;
-  }else{
+//  if (modeR == 1) {
+//    ArduinoOTA.handle();
+//    getStatusRun();
+//    return;
+//  }else{
     checkSerialCommand();
-  }
+//  }
   
 
 
@@ -173,7 +173,7 @@ void loop() {
     webSocket.loop();
   }
 
-  digitalWrite(LED_WIFI, (wifiConnected && wsConnected && !modeSetting && !modeR) ? HIGH : LOW);
+  digitalWrite(LED_WIFI, (wifiConnected && wsConnected) ? HIGH : LOW);
 }
 
 // ------------------- Perintah Serial -------------------
